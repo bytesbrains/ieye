@@ -1,0 +1,14 @@
+{
+  "name": "iEye",
+  "short_name": "iEye",
+  "description": "iEye gets help to you in time.",
+  "icons": [
+    { "src": "/icons/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "theme_color": "#f4efe1",
+  "background_color": "#f4efe1",
+  "display": "standalone",
+  "start_url": "/"
+}
