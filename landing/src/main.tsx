@@ -1,10 +1,66 @@
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import App from "./App";
+import { Spinner } from "./components/app/Spinner";
 import "./index.css";
+
+// The public landing (/) ships in the main bundle — fast, no Firebase.
+// Everything auth'd (which pulls in Firebase + the auth context) is lazy-loaded
+// so a first-time visitor to the landing page never downloads Firebase.
+const AuthShell = lazy(() => import("./auth/AuthShell"));
+
+function Lazy({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Spinner />
+        </div>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
+
+// Routes:
+//   /        -> public landing (Phase 1, unchanged, no auth, no Firebase)
+//   /signin  -> Google sign-in        (lazy, behind AuthProvider)
+//   /account -> signed-in user space  (lazy, RequireAuth)
+//   /admin   -> admin shell           (lazy, RequireAdmin — admin custom claim)
+const router = createBrowserRouter([
+  { path: "/", element: <App /> },
+  {
+    path: "/signin",
+    element: (
+      <Lazy>
+        <AuthShell view="signin" />
+      </Lazy>
+    ),
+  },
+  {
+    path: "/account",
+    element: (
+      <Lazy>
+        <AuthShell view="account" />
+      </Lazy>
+    ),
+  },
+  {
+    path: "/admin",
+    element: (
+      <Lazy>
+        <AuthShell view="admin" />
+      </Lazy>
+    ),
+  },
+  // Unknown paths fall back to the public landing.
+  { path: "*", element: <App /> },
+]);
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <RouterProvider router={router} />
   </React.StrictMode>
 );

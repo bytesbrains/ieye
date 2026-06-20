@@ -1,6 +1,5 @@
 {
-  "//": "PLACEHOLDER. The CEO creates the real Firebase project under the BytesBrains Google account (#42), then replaces 'ieye-placeholder' with the real project id (e.g. `firebase use --add`). Do NOT run `firebase deploy` until that exists.",
   "projects": {
-    "default": "ieye-placeholder"
+    "default": "ieye-in"
   }
 }

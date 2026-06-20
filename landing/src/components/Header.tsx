@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Wordmark } from "./Brand";
 
 const NAV = [
@@ -23,6 +24,12 @@ export function Header() {
               {item.label}
             </a>
           ))}
+          <Link
+            to="/signin"
+            className="rounded-md text-base text-charcoal-soft hover:text-charcoal"
+          >
+            Sign in
+          </Link>
           <a href="#waitlist" className="btn btn-primary px-5 py-2 text-sm">
             Notify me
           </a>

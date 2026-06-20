@@ -4,3 +4,10 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Firebase emulator artifacts
+.emulator-seed/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/
