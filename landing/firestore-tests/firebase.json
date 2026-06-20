@@ -1,0 +1,13 @@
+{
+  "//": "Test-only Firebase config used by `firebase emulators:exec` for the rules unit tests. Points at the real rules one directory up so tests always exercise the shipping firestore.rules. Hosting is intentionally omitted here.",
+  "firestore": {
+    "rules": "../firestore.rules",
+    "indexes": "../firestore.indexes.json"
+  },
+  "emulators": {
+    "firestore": { "port": 8080 },
+    "auth": { "port": 9099 },
+    "singleProjectMode": true,
+    "ui": { "enabled": false }
+  }
+}
