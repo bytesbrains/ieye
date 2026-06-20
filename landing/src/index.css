@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-paper text-charcoal font-sans antialiased;
+    font-size: 1.125rem; /* 18px base for the elderly/family audience */
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Visible, high-contrast focus ring everywhere (keyboard a11y, AAA-minded) */
+  :focus-visible {
+    @apply outline-none ring-2 ring-charcoal ring-offset-2 ring-offset-paper;
+    border-radius: 0.25rem;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-serif text-charcoal;
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Section rhythm */
+  .section {
+    @apply px-5 py-16 sm:py-24;
+  }
+  .container-prose {
+    @apply mx-auto w-full max-w-prose;
+  }
+  .container-wide {
+    @apply mx-auto w-full max-w-4xl;
+  }
+
+  /* Buttons — beacon-amber primary, charcoal-outline secondary. */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-base font-semibold
+      transition-colors duration-150;
+    min-height: 48px; /* comfortable tap target */
+  }
+  .btn-primary {
+    @apply bg-amber-deep text-paper hover:bg-amber;
+  }
+  .btn-secondary {
+    @apply border-2 border-charcoal/30 bg-transparent text-charcoal hover:border-charcoal hover:bg-charcoal/5;
+  }
+  .btn-ghost {
+    @apply text-charcoal-soft underline decoration-amber/60 decoration-2 underline-offset-4 hover:text-charcoal hover:decoration-amber;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-sm font-semibold text-charcoal-soft;
+  }
+  .field-input {
+    @apply w-full rounded-lg border-2 border-charcoal/20 bg-white/60 px-4 py-3 text-base text-charcoal
+      placeholder:text-charcoal-faint focus:border-amber-deep focus:outline-none;
+    min-height: 48px;
+  }
+  .field-input[aria-invalid="true"] {
+    @apply border-amber-deep;
+  }
+  .field-error {
+    @apply mt-1.5 text-sm font-medium text-amber-deep;
+  }
+}
+
+/* Respect reduced-motion: kill all decorative animation + smooth scroll. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
