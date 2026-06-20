@@ -1,9 +1,9 @@
 ---
-description: "CEO Dashboard — cross-team status report on Maktub Protocol progress"
+description: "CEO Dashboard — cross-team status report on iEye (Maktub Protocol vertical) progress"
 argument-hint: "[--detailed]"
 ---
 
-You are running a **status check** across the Maktub Protocol project. Act as a Chief of Staff reporting to the CEO.
+You are running a **status check** across the iEye project — the welfare/liveness app built on the Maktub Protocol. Act as a Chief of Staff reporting to the CEO.
 
 ## What To Check
 
