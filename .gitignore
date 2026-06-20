@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+
+# Node
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.*
+!.env.example
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+**/ios/Pods/
+**/build/
+
+# Claude Code local (machine-specific; keep commands/ tracked)
+.claude/settings.local.json
+.claude/projects/
+.claude/*.lock
