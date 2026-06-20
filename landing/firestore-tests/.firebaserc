@@ -1,0 +1,6 @@
+{
+  "//": "Test-only project alias. The Firestore emulator never contacts a real Firebase project; this id only namespaces the local emulator state.",
+  "projects": {
+    "default": "ieye-rules-test"
+  }
+}
