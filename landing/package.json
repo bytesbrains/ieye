@@ -8,13 +8,19 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-ieye",
+    "emulators:seed": "firebase emulators:start --only auth,firestore --project demo-ieye --import ./.emulator-seed --export-on-exit ./.emulator-seed",
+    "grant-admin": "node scripts/grant-admin.mjs"
   },
   "dependencies": {
+    "firebase": "^11.10.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.4"
   },
   "devDependencies": {
+    "firebase-tools": "^13.29.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",

@@ -1,6 +1,6 @@
+import { Link } from "react-router-dom";
 import { Section } from "./Section";
-import { WaitlistForm } from "./WaitlistForm";
-import { SkillsForm } from "./SkillsForm";
+import { WaitlistCta } from "./WaitlistCta";
 
 export function Contribute() {
   return (
@@ -23,19 +23,21 @@ export function Contribute() {
         {/* Phase 1: NO live payment / no money UI / no crypto address.
             Contributions are framed as coming soon (Phase 2, Legal-gated #39). */}
         <div className="mt-12 grid gap-8 lg:grid-cols-2">
-          {/* Waitlist — register interest / notify me */}
+          {/* Waitlist — register interest via Google sign-in (name + email
+              captured from the profile; written to the user's own doc). */}
           <div id="waitlist" className="rounded-2xl border-2 border-charcoal/10 bg-paper-dim p-7 sm:p-8">
             <h3 className="text-2xl font-semibold text-charcoal">Want it for someone you love?</h3>
             <p className="mt-2 text-base text-charcoal-soft">
-              iEye isn&rsquo;t open to the public yet. Leave your email and we&rsquo;ll tell you the
-              moment it is.
+              iEye isn&rsquo;t open to the public yet. Sign in with Google and we&rsquo;ll tell you the
+              moment it is — no form to fill in.
             </p>
             <div className="mt-6">
-              <WaitlistForm />
+              <WaitlistCta />
             </div>
           </div>
 
-          {/* Contribute your skills */}
+          {/* Contribute your skills — sign in, then the contributor-request
+              form on /account (one source of truth, writes contributorRequests). */}
           <div className="rounded-2xl border-2 border-charcoal/10 bg-paper-dim p-7 sm:p-8">
             <h3 className="text-2xl font-semibold text-charcoal">Help build iEye</h3>
             <p className="mt-2 text-base text-charcoal-soft">
@@ -43,7 +45,19 @@ export function Contribute() {
               open by people who care.
             </p>
             <div className="mt-6">
-              <SkillsForm />
+              <Link to="/account" className="btn btn-primary w-full">
+                {/* Google "G" glyph */}
+                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="#EA4335"
+                    d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1a6.2 6.2 0 0 1 0-12.4c1.94 0 3.25.82 4 1.53l2.72-2.62C17.06 2.9 14.76 2 12 2a10 10 0 0 0 0 20c5.77 0 9.6-4.06 9.6-9.78 0-.66-.07-1.16-.16-1.66H12z"
+                  />
+                </svg>
+                Sign in to offer your skills
+              </Link>
+              <p className="mt-4 text-sm text-charcoal-muted">
+                You&rsquo;ll sign in with Google, then tell us how you can help on your account page.
+              </p>
             </div>
           </div>
         </div>
