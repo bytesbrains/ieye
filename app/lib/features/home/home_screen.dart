@@ -91,6 +91,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: IEyeColors.charcoalSoft,
                     ),
                   ),
+                  // The reach half of honest coverage, read through the delivery
+                  // boundary (#12). Kept here too — not only in the amber note —
+                  // so a more urgent sensing caveat can never hide the fact that
+                  // no alert would actually leave this phone yet.
+                  if (!c.canSummonHelp) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'And right now iEye can’t send an alert off this phone, so no '
+                      'one would be told yet. It will say so plainly — never pretend '
+                      'someone is watching when no message could reach them.',
+                      style: text.bodyMedium?.copyWith(
+                        fontSize: 15,
+                        color: IEyeColors.charcoalSoft,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             );

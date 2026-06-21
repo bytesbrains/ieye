@@ -2,11 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ieye/app.dart';
 import 'package:ieye/core/checker.dart';
+import 'package:ieye/core/trigger_sink.dart';
+import 'package:ieye/core/welfare_signal.dart';
 import 'package:ieye/features/checker/checker_invite_screen.dart';
 
 /// Shared E2E helpers. Keep finders + flows here so each new feature test reads
 /// like prose and we don't duplicate brittle lookups as the app grows. Add a
 /// finder/robot here whenever you add a screen, then write the flow in app_test.
+
+/// A delivery boundary that CAN reach off-device. Sensing/circle tests inject it
+/// so the watching happy-path is reachable — otherwise the real no-op sink would
+/// honestly degrade coverage (#27) and mask the thing under test. Fires nothing.
+class ReachSink implements TriggerSink {
+  @override
+  String get name => 'Reaching (test)';
+  @override
+  bool get sendsOffDevice => true;
+  @override
+  Future<void> fire(WelfareSignal signal) async {}
+}
 
 /// Boot the real app and let it settle.
 Future<void> pumpApp(WidgetTester tester) async {
@@ -21,6 +35,13 @@ final brandLogo = find.image(const AssetImage('assets/ieye-appicon.png'));
 
 // ---- home (honest coverage) ----
 final watchingHeadline = find.text('Watching over you.');
+// The honest degraded headline. The real prototype signs nothing / sends nothing
+// off-device, so its delivery boundary (LocalNoopSink) can't reach anyone — the
+// home tells that truth instead of a fake watching all-clear (#27).
+final degradedHeadline = find.textContaining('you should know something');
+// The reach gap, surfaced through the TriggerSink boundary (#27): no alert can
+// leave the phone yet, so no one would be told — said plainly, never hidden.
+final reachGapNote = find.textContaining('no alert would go out');
 final lastSignOfLife = find.textContaining('Last sign of life');
 final peopleWatching = find.textContaining('watching');
 final goingDarkButton = find.textContaining('going dark');
