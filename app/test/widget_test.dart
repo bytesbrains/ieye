@@ -4,7 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:ieye/app.dart';
 import 'package:ieye/core/checker.dart';
 import 'package:ieye/core/circle.dart';
+import 'package:ieye/core/coverage.dart';
 import 'package:ieye/core/detection_brain.dart';
+import 'package:ieye/core/phone_signals.dart';
+import 'package:ieye/core/tier0_detector.dart';
 import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
 import 'package:ieye/features/home/home_screen.dart';
@@ -20,7 +23,7 @@ void main() {
   testWidgets('home shows honest coverage, never a green "protected" shield', (
     tester,
   ) async {
-    final brain = Tier0StubBrain();
+    final brain = Tier0Brain();
     addTearDown(brain.dispose);
 
     await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));
@@ -35,7 +38,7 @@ void main() {
   testWidgets('going dark pauses the watch and says it is planned', (
     tester,
   ) async {
-    final brain = Tier0StubBrain();
+    final brain = Tier0Brain();
     addTearDown(brain.dispose);
 
     await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));
@@ -186,6 +189,136 @@ void main() {
       expect(store.circle.members.map((m) => m.id), ['maria', 'priya']);
       store.undoLastResign();
       expect(store.circle.members.map((m) => m.id), ['maria', 'tom', 'priya']);
+    });
+  });
+
+  group('tier-0 rhythm rule (#14 — honest phone-only limits)', () {
+    const detector = Tier0Detector();
+    final now = DateTime(2026, 6, 22, 12, 0);
+    PhoneSignals sig({
+      Duration since = const Duration(minutes: 5),
+      int battery = 80,
+      bool charging = false,
+      bool reachable = true,
+    }) => PhoneSignals(
+      lastInteraction: now.subtract(since),
+      batteryPercent: battery,
+      charging: charging,
+      reachable: reachable,
+    );
+
+    test('recent interaction + healthy battery → watching, no caveat', () {
+      final a = detector.assess(sig(), now);
+      expect(a.status, SensingStatus.watching);
+      expect(a.isHealthy, isTrue);
+      expect(a.limitNote, isNull);
+    });
+
+    test(
+      'an unreachable phone is NOT an all-clear (dead-phone blind spot)',
+      () {
+        final a = detector.assess(sig(reachable: false), now);
+        expect(a.status, SensingStatus.lostContact);
+        expect(a.limitNote, contains('promise you'));
+      },
+    );
+
+    test('silence beyond the window is a concern', () {
+      final a = detector.assess(sig(since: const Duration(hours: 15)), now);
+      expect(a.status, SensingStatus.silenceConcern);
+    });
+
+    test('silence boundary: exactly at the window counts as concern', () {
+      expect(
+        detector.assess(sig(since: const Duration(hours: 14)), now).status,
+        SensingStatus.silenceConcern,
+      );
+      expect(
+        detector
+            .assess(sig(since: const Duration(hours: 13, minutes: 59)), now)
+            .status,
+        SensingStatus.watching,
+      );
+    });
+
+    test('low battery is surfaced pre-emptively, unless charging', () {
+      expect(
+        detector.assess(sig(battery: 10), now).status,
+        SensingStatus.batteryLow,
+      );
+      expect(
+        detector.assess(sig(battery: 10, charging: true), now).status,
+        SensingStatus.watching,
+      );
+    });
+
+    test('battery boundary: == threshold is low, one above is fine', () {
+      expect(
+        detector.assess(sig(battery: 20), now).status,
+        SensingStatus.batteryLow,
+      );
+      expect(
+        detector.assess(sig(battery: 21), now).status,
+        SensingStatus.watching,
+      );
+    });
+
+    test('lost contact dominates low battery', () {
+      final a = detector.assess(sig(battery: 5, reachable: false), now);
+      expect(a.status, SensingStatus.lostContact);
+    });
+  });
+
+  group('Tier0Brain composition (#14)', () {
+    PhoneSignals sig({
+      Duration since = const Duration(minutes: 5),
+      int battery = 80,
+      bool reachable = true,
+    }) => PhoneSignals(
+      lastInteraction: DateTime(2026, 6, 22, 12, 0).subtract(since),
+      batteryPercent: battery,
+      charging: false,
+      reachable: reachable,
+    );
+    DateTime fixedNow() => DateTime(2026, 6, 22, 12, 0);
+
+    test('an injected clock drives the silence path deterministically', () {
+      final signals = StubPhoneSignalsSource(
+        sig(since: const Duration(hours: 20)),
+      );
+      final circle = CircleStore(demoCircleMembers());
+      addTearDown(signals.dispose);
+      addTearDown(circle.dispose);
+      final brain = Tier0Brain(signals: signals, circle: circle, now: fixedNow);
+      addTearDown(brain.dispose);
+
+      expect(brain.current.status, CoverageStatus.degraded);
+      expect(
+        brain.current.note,
+        contains('reaching the people watching over you'),
+      );
+    });
+
+    test('re-emits coverage on a signals change AND a circle change', () async {
+      final signals = StubPhoneSignalsSource(sig());
+      final circle = CircleStore(demoCircleMembers());
+      addTearDown(signals.dispose);
+      addTearDown(circle.dispose);
+      final brain = Tier0Brain(signals: signals, circle: circle, now: fixedNow);
+      addTearDown(brain.dispose);
+
+      final seen = <CoverageStatus>[];
+      final sub = brain.coverage.listen((s) => seen.add(s.status));
+      addTearDown(sub.cancel);
+      await Future<void>.delayed(Duration.zero); // initial replay
+
+      signals.update(sig(battery: 5)); // sensing degrades
+      circle.resign('maria'); // circle degrades
+      await Future<void>.delayed(Duration.zero);
+
+      expect(seen.first, CoverageStatus.watching);
+      expect(seen.where((s) => s == CoverageStatus.degraded), isNotEmpty);
+      expect(seen.length, greaterThanOrEqualTo(3)); // initial + 2 changes
     });
   });
 }

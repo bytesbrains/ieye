@@ -23,7 +23,7 @@ class _IEyeAppState extends State<IEyeApp> {
   // One circle, shared: the brain reads coverage from it, the circle screen edits
   // it — so a resignation flows straight into owner-visible coverage (#18).
   final CircleStore _circle = CircleStore(demoCircleMembers());
-  late final DetectionBrain _brain = Tier0StubBrain(circle: _circle);
+  late final DetectionBrain _brain = Tier0Brain(circle: _circle);
 
   @override
   void dispose() {
