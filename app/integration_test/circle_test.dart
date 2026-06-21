@@ -78,7 +78,7 @@ void main() {
       tester,
     ) async {
       final store = CircleStore(demoCircleMembers());
-      final brain = Tier0StubBrain(circle: store);
+      final brain = Tier0Brain(circle: store);
       addTearDown(brain.dispose);
 
       await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));

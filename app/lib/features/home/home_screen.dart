@@ -65,6 +65,32 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: IEyeColors.charcoalSoft,
                     ),
                   ),
+                  const SizedBox(height: 24),
+                  // Honest Tier-0 limits (#14): never pretend phone-only is more
+                  // than it is. Distinct block (header + plain two sentences) so
+                  // it doesn't blur into the privacy line above, and a screen
+                  // reader announces it as its own section.
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'What iEye can and can’t do yet',
+                      style: text.bodyMedium?.copyWith(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: IEyeColors.charcoal,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'For now, iEye watches using your phone alone. If the phone is '
+                    'off or the battery runs out, iEye can lose contact — and when '
+                    'that happens it tells you, instead of pretending all is well.',
+                    style: text.bodyMedium?.copyWith(
+                      fontSize: 15,
+                      color: IEyeColors.charcoalSoft,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -82,23 +108,33 @@ class _StatusHeadline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final (headline, accent) = switch (c.status) {
-      CoverageStatus.watching => ('Watching over you.', IEyeColors.tealDeep),
+    // Distinct glyph AND colour per state — never colour alone (colour-blind).
+    final (headline, accent, icon) = switch (c.status) {
+      CoverageStatus.watching => (
+        'Watching over you.',
+        IEyeColors.tealDeep,
+        Icons.wb_incandescent_outlined, // a lamp "left on for you"
+      ),
       // Degraded uses beacon-amber (attention), never alarm-red.
       CoverageStatus.degraded => (
         'Watching — but you should know something.',
         IEyeColors.amberDeep,
+        Icons.warning_amber_rounded,
       ),
       CoverageStatus.pausedGoingDark => (
         'Paused — you told us you’re away.',
         IEyeColors.charcoalSoft,
+        Icons.dark_mode_outlined,
       ),
-      CoverageStatus.notArmed => ('Not watching yet.', IEyeColors.charcoalSoft),
+      CoverageStatus.notArmed => (
+        'Not watching yet.',
+        IEyeColors.charcoalSoft,
+        Icons.power_settings_new,
+      ),
     };
     return Row(
       children: [
-        // A lamp/beacon "left on for you" — color shifts by state (never red).
-        Icon(Icons.wb_incandescent_outlined, color: accent, size: 28),
+        Icon(icon, color: accent, size: 28),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
