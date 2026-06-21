@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'circle.dart';
 import 'coverage.dart';
+import 'liveness_source.dart';
 import 'phone_signals.dart';
 import 'tier0_detector.dart';
 import 'trigger_sink.dart';
@@ -32,60 +33,55 @@ abstract interface class DetectionBrain {
   void dispose();
 }
 
-/// Tier-0 phone-only brain (#14). Runs the real rhythm rule ([Tier0Detector])
-/// over phone signals and merges the result with the circle's health into one
-/// honest [CoverageState]. The ONLY stub now is the signal *source* (real battery
-/// + activity need a platform plugin) — the rule and the honest limits are real.
-///
-/// Coverage is read through THIS engine boundary only (mode-agnostic) — no UI
-/// computes it ad hoc, so a phone-only gap or a coverage drop can never be hidden
-/// (PRD §3D/§11: "ship the limits visibly, not the dream").
+/// The multi-source brain (#62, #60). It fuses a SET of honest [LivenessSource]s
+/// with the circle's health and the delivery boundary into one honest
+/// [CoverageState]. Tier-0 phone-only is just one instance of it ([Tier0Brain],
+/// one phone source) — past Tier-0 the same brain takes home-mesh / wrist / HW
+/// sources with no new composition path.
 ///
 /// Coverage has TWO honest halves and the brain fuses both: can we DETECT a
-/// problem (the sensing engine + circle), and can we DELIVER help when we do (the
-/// [TriggerSink] boundary, #12). The delivery half is read through the sink's
-/// mode-agnostic [TriggerSink.sendsOffDevice] flag — never Easy-mode internals —
-/// so when nothing can leave the phone the home degrades honestly instead of
-/// showing a watching all-clear no one would ever hear (PRD §6/§7).
-class Tier0Brain implements DetectionBrain {
-  /// Injected [circle]/[signals] are owned by the caller (the brain only listens).
-  /// Omitted ones are created and owned (and disposed) by the brain.
-  ///
-  /// [sink] is the active delivery boundary whose reach folds into coverage. It
-  /// defaults to the signs-nothing [LocalNoopSink] — the honest truth of the
-  /// green-lit prototype: it can watch, but it cannot yet summon anyone, and the
-  /// home must say so.
-  Tier0Brain({
+/// problem (the [LivenessSource]s + circle) and can we DELIVER help when we do
+/// (the [TriggerSink] boundary, #12). Coverage is read through THIS engine
+/// boundary only (mode-agnostic) — no UI computes it ad hoc, so a sensor gap, a
+/// coverage drop, or a no-reach gap can never be hidden (PRD §3D/§11/§6).
+///
+/// The fusion rule lives in [fuseLiveness]: corroboration suppresses false alarms
+/// (phone dead BUT home active = alive), genuine multi-source silence escalates,
+/// and any degraded source degrades coverage — never a false `watching`.
+class FusionBrain implements DetectionBrain {
+  /// The brain OWNS the [sources] plugged into it and disposes them with itself.
+  /// (A source's own internals — e.g. a phone signal stream it merely listens to —
+  /// stay owned by whoever created them; see [PhoneLivenessSource].) The injected
+  /// [circle] follows the usual rule: caller-provided is caller-owned, an omitted
+  /// one is created and disposed here.
+  FusionBrain({
+    required List<LivenessSource> sources,
     CircleStore? circle,
-    PhoneSignalsSource? signals,
     TriggerSink? sink,
-    Tier0Detector detector = const Tier0Detector(),
     DateTime Function() now = DateTime.now,
-  }) : _circle = circle ?? CircleStore(demoCircleMembers()),
+  }) : _sources = sources,
+       _circle = circle ?? CircleStore(demoCircleMembers()),
        _ownsCircle = circle == null,
-       _signals = signals ?? StubPhoneSignalsSource(),
-       _ownsSignals = signals == null,
        _sink = sink ?? LocalNoopSink(),
-       _detector = detector,
        _now = now {
+    for (final s in _sources) {
+      s.addListener(_recompose);
+    }
     _circle.addListener(_recompose);
-    _signals.addListener(_recompose);
     _state = _compose();
     _controller = StreamController<CoverageState>.broadcast(
       onListen: () => _controller.add(_state),
     );
   }
 
+  final List<LivenessSource> _sources;
   final CircleStore _circle;
   final bool _ownsCircle;
-  final PhoneSignalsSource _signals;
-  final bool _ownsSignals;
   // The delivery boundary (#12). The brain only reads its reach capability
   // ([sendsOffDevice]); it never fires it here — the prototype signs nothing.
   final TriggerSink _sink;
-  final Tier0Detector _detector;
   // Injectable clock for deterministic tests. NOTE: coverage is only re-evaluated
-  // when the circle or signals notify — there is no periodic tick yet, so the
+  // when a source or the circle notifies — there is no periodic tick yet, so the
   // slow-silence path needs a Timer/real source to fire on its own in the field
   // (follow-up: #13 rung-0 / #15 background).
   final DateTime Function() _now;
@@ -107,7 +103,9 @@ class Tier0Brain implements DetectionBrain {
 
   CoverageState _compose() {
     final c = _circle.circle;
-    final a = _detector.assess(_signals.current, _now());
+    // Fuse every source into one honest verdict (corroboration suppresses false
+    // alarms; multi-source silence escalates; any caveat degrades).
+    final a = fuseLiveness([for (final s in _sources) s.assess(_now())]);
 
     // Can an alert actually leave this phone? Read once, through the boundary.
     final canDeliver = _sink.sendsOffDevice;
@@ -131,12 +129,12 @@ class Tier0Brain implements DetectionBrain {
     }
 
     // Three honest ways coverage degrades, in priority order for the single note
-    // slot. A sensing problem (the person/phone) is the most urgent thing the
+    // slot. A sensing problem (the person/sensors) is the most urgent thing the
     // owner must act on, so it wins. Next, "we can't reach anyone off this phone"
     // — sensing may be fine, but no alert would ever go out, so we must NOT show a
     // watching all-clear (the structural anti-fake-green-shield rule). Last, a
     // circle gap. ANY of the three degrades the status — never a false watching.
-    final sensingDegraded = !a.isHealthy;
+    final sensingDegraded = !a.isAlive;
     final note =
         sensingDegraded
             ? a.limitNote
@@ -185,10 +183,12 @@ class Tier0Brain implements DetectionBrain {
 
   @override
   void dispose() {
+    for (final s in _sources) {
+      s.removeListener(_recompose);
+      s.dispose(); // the brain owns the sources plugged into it
+    }
     _circle.removeListener(_recompose);
-    _signals.removeListener(_recompose);
     if (_ownsCircle) _circle.dispose(); // only dispose what we created
-    if (_ownsSignals) _signals.dispose();
     _controller.close();
   }
 
@@ -208,5 +208,55 @@ class Tier0Brain implements DetectionBrain {
       'Dec',
     ];
     return '${d.day} ${months[d.month - 1]}';
+  }
+}
+
+/// Tier-0 phone-only brain (#14) — a [FusionBrain] with exactly one source: the
+/// phone ([PhoneLivenessSource] over the #14 rhythm rule). It keeps the same
+/// public surface as before so phone-only behaviour is unchanged; everything past
+/// Tier-0 just adds more sources to a [FusionBrain].
+///
+/// The ONLY stub now is the signal *source* (real battery + activity need a
+/// platform plugin) — the rule and the honest limits are real.
+class Tier0Brain extends FusionBrain {
+  /// Injected [signals] are owned by the caller; an omitted one is created and
+  /// owned (and disposed) here. (The circle follows the same rule via [super].)
+  Tier0Brain({
+    CircleStore? circle,
+    PhoneSignalsSource? signals,
+    TriggerSink? sink,
+    Tier0Detector detector = const Tier0Detector(),
+    DateTime Function() now = DateTime.now,
+  }) : this._(
+         signals ?? StubPhoneSignalsSource(),
+         signals == null,
+         circle,
+         sink,
+         detector,
+         now,
+       );
+
+  Tier0Brain._(
+    PhoneSignalsSource signals,
+    this._ownsSignals,
+    CircleStore? circle,
+    TriggerSink? sink,
+    Tier0Detector detector,
+    DateTime Function() now,
+  ) : _signals = signals,
+      super(
+        sources: [PhoneLivenessSource(signals, detector)],
+        circle: circle,
+        sink: sink,
+        now: now,
+      );
+
+  final PhoneSignalsSource _signals;
+  final bool _ownsSignals;
+
+  @override
+  void dispose() {
+    super.dispose(); // disposes the PhoneLivenessSource (detaches from _signals)
+    if (_ownsSignals) _signals.dispose(); // only dispose signals we created
   }
 }
