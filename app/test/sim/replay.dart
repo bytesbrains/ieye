@@ -2,6 +2,8 @@ import 'package:ieye/core/circle.dart';
 import 'package:ieye/core/coverage.dart';
 import 'package:ieye/core/detection_brain.dart';
 import 'package:ieye/core/phone_signals.dart';
+import 'package:ieye/core/rhythm.dart';
+import 'package:ieye/core/tier0_detector.dart';
 import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
 
@@ -146,7 +148,17 @@ class _ReachingSink implements TriggerSink {
 
 /// Replay one scenario through a real [Tier0Brain] and score the result.
 /// Deterministic: the clock is virtual and advances only as we sample.
-ScenarioResult runScenario(Scenario s, {required DateTime t0}) {
+///
+/// The silence policy is selectable so the harness can MEASURE the per-person
+/// rhythm win (#64): pass [fixedWindow] for a constant window, or [rhythm] for a
+/// learned per-person window (it learns from the trace's interactions as they
+/// replay). Default is the shipped fixed 14h.
+ScenarioResult runScenario(
+  Scenario s, {
+  required DateTime t0,
+  Duration? fixedWindow,
+  RhythmModel? rhythm,
+}) {
   assert(
     s.frames.isNotEmpty && s.frames.first.at == Duration.zero,
     'a scenario needs a frame at offset zero',
@@ -159,6 +171,10 @@ ScenarioResult runScenario(Scenario s, {required DateTime t0}) {
     signals: signals,
     circle: circle,
     sink: _ReachingSink(),
+    detector: fixedWindow == null
+        ? const Tier0Detector()
+        : Tier0Detector(Tier0Config(silenceWindow: fixedWindow)),
+    rhythm: rhythm,
     now: () => now,
   );
 

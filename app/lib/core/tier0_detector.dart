@@ -55,7 +55,12 @@ class Tier0Detector {
 
   final Tier0Config config;
 
-  Tier0Assessment assess(PhoneSignals s, DateTime now) {
+  /// [silenceWindow] overrides the fixed [Tier0Config.silenceWindow] for this one
+  /// assessment — the per-person rhythm baseline (#64) passes its learned window
+  /// here, so "too quiet" means "unusual for you", not a global constant. Null =
+  /// use the configured default (today's fixed behaviour).
+  Tier0Assessment assess(PhoneSignals s, DateTime now, {Duration? silenceWindow}) {
+    final window = silenceWindow ?? config.silenceWindow;
     // Lost contact dominates everything: phone-only can't distinguish a dead
     // battery from a collapsed person, so this is never a confident all-clear.
     if (!s.reachable) {
@@ -69,7 +74,7 @@ class Tier0Detector {
             'you’re okay.',
       );
     }
-    if (now.difference(s.lastInteraction) >= config.silenceWindow) {
+    if (now.difference(s.lastInteraction) >= window) {
       return Tier0Assessment(
         status: SensingStatus.silenceConcern,
         lastSignOfLife: s.lastInteraction,

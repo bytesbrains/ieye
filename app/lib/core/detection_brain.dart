@@ -4,6 +4,7 @@ import 'circle.dart';
 import 'coverage.dart';
 import 'liveness_source.dart';
 import 'phone_signals.dart';
+import 'rhythm.dart';
 import 'tier0_detector.dart';
 import 'trigger_sink.dart';
 
@@ -226,6 +227,7 @@ class Tier0Brain extends FusionBrain {
     PhoneSignalsSource? signals,
     TriggerSink? sink,
     Tier0Detector detector = const Tier0Detector(),
+    RhythmModel? rhythm,
     DateTime Function() now = DateTime.now,
   }) : this._(
          signals ?? StubPhoneSignalsSource(),
@@ -233,6 +235,7 @@ class Tier0Brain extends FusionBrain {
          circle,
          sink,
          detector,
+         rhythm,
          now,
        );
 
@@ -242,10 +245,11 @@ class Tier0Brain extends FusionBrain {
     CircleStore? circle,
     TriggerSink? sink,
     Tier0Detector detector,
+    RhythmModel? rhythm,
     DateTime Function() now,
   ) : _signals = signals,
       super(
-        sources: [PhoneLivenessSource(signals, detector)],
+        sources: [PhoneLivenessSource(signals, detector, rhythm)],
         circle: circle,
         sink: sink,
         now: now,

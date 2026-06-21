@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'phone_signals.dart';
+import 'rhythm.dart';
 import 'tier0_detector.dart';
 
 /// One honest liveness signal, and the rule that fuses many of them (#62, #60).
@@ -81,6 +82,7 @@ class PhoneLivenessSource extends LivenessSource {
   PhoneLivenessSource(
     this._signals, [
     this._detector = const Tier0Detector(),
+    this._rhythm,
   ]) {
     _signals.addListener(notifyListeners);
   }
@@ -88,12 +90,21 @@ class PhoneLivenessSource extends LivenessSource {
   final PhoneSignalsSource _signals;
   final Tier0Detector _detector;
 
+  /// Optional per-person rhythm (#64). When present, the source learns this
+  /// person's normal quiet stretches and uses a learned silence window instead of
+  /// the fixed default — falling back honestly until enough rhythm is observed.
+  final RhythmModel? _rhythm;
+
   @override
   String get label => 'your phone';
 
   @override
   LivenessAssessment assess(DateTime now) {
-    final a = _detector.assess(_signals.current, now);
+    final s = _signals.current;
+    // Learn from each fresh sign of life, then judge silence against THIS person's
+    // rhythm. observeInteraction is idempotent on a repeated reading.
+    _rhythm?.observeInteraction(s.lastInteraction);
+    final a = _detector.assess(s, now, silenceWindow: _rhythm?.silenceWindow);
     final status = switch (a.status) {
       SensingStatus.watching => LivenessStatus.alive,
       SensingStatus.batteryLow => LivenessStatus.degraded,
