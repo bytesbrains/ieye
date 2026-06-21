@@ -16,8 +16,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('onboarding', () {
-    testWidgets('shows the brand mark and both setup roles (buyer ≠ watched)',
-        (tester) async {
+    testWidgets('shows the brand mark and both setup roles (buyer ≠ watched)', (
+      tester,
+    ) async {
       await pumpApp(tester);
       expect(brandLogo, findsOneWidget); // the real brand asset renders
       expect(forMyself, findsOneWidget);
@@ -26,15 +27,19 @@ void main() {
   });
 
   group('watched flow — honest coverage', () {
-    testWidgets('"for myself" lands on an honest home, never a green shield',
-        (tester) async {
+    testWidgets('"for myself" lands on an honest home, never a green shield', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await goToHomeAsMyself(tester);
 
       expect(watchingHeadline, findsOneWidget);
       expect(lastSignOfLife, findsOneWidget);
       expect(peopleWatching, findsWidgets);
-      expect(fakeProtectedShield, findsNothing); // over-trust guardrail (PRD §7)
+      expect(
+        fakeProtectedShield,
+        findsNothing,
+      ); // over-trust guardrail (PRD §7)
     });
   });
 

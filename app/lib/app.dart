@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'core/checker.dart';
 import 'core/detection_brain.dart';
+import 'features/checker/checker_invite_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_entry_screen.dart';
 import 'theme/ieye_theme.dart';
@@ -34,6 +36,12 @@ class _IEyeAppState extends State<IEyeApp> {
       routes: {
         '/': (_) => const OnboardingEntryScreen(),
         '/home': (_) => HomeScreen(brain: _brain),
+        // Checkers arrive here from an invite link (#17). Demo invite until real
+        // invites are wired; the handshake itself is fully functional.
+        '/checker-invite':
+            (_) => const CheckerInviteScreen(
+              invite: CheckerInvite(ownerName: 'Sandeep'),
+            ),
       },
     );
   }

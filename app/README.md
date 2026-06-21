@@ -23,10 +23,13 @@ lib/
     trigger_sink.dart       pluggable delivery seam (#12); LocalNoopSink signs nothing
     detection_brain.dart    shared on-device brain interface (#11); Tier0StubBrain
     coverage.dart           honest coverage state (no fake "protected" boolean)
+    checker.dart            checker consent state (#17) — active accept, no silent enrolment
   features/
     onboarding/             two-role entry: "for myself" / "for someone I care about"
     home/                   honest-coverage home + the "going dark" flow (PRD §3C)
-test/widget_test.dart       spine + guardrail tests (5)
+    checker/                checker consent handshake — invite → accept → availability → rehearsal (#17)
+test/widget_test.dart       unit/guardrail tests
+integration_test/           on-device E2E: app_test.dart + checker_test.dart (+ finders.dart)
 ```
 
 ## Design constraints baked in (don't regress these)
@@ -53,9 +56,11 @@ flutter test           # unit + widget tests
 flutter analyze
 ```
 
-## Next slices (not in this scaffold)
+Run the on-device E2E: `flutter test integration_test -d <device-id>`.
 
-- Checker consent handshake + rehearsal (#17) — the product spine's other half.
+## Next slices
+
+- Circle visibility + graceful checker exit (#18) — surface coverage drops.
 - Tier-0 phone-only sensing behind `DetectionBrain` (#14): GPS + IMU + battery +
   per-location rhythm.
 - Escalation ladder as lived experience (#21); auto-call (#22, Easy mode, gated).
