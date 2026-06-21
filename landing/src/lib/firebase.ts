@@ -12,6 +12,11 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, connectAuthEmulator, GoogleAuthProvider, type Auth } from "firebase/auth";
 import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
+import { getFunctions, connectFunctionsEmulator, type Functions } from "firebase/functions";
+
+// Callable functions live in asia-south1 (next to Firestore) — the region MUST
+// match the deployed functions or callables 404.
+const FUNCTIONS_REGION = "asia-south1";
 
 const env = import.meta.env;
 
@@ -29,6 +34,7 @@ const firebaseConfig = {
 export const app: FirebaseApp = initializeApp(firebaseConfig);
 export const auth: Auth = getAuth(app);
 export const db: Firestore = getFirestore(app);
+export const functions: Functions = getFunctions(app, FUNCTIONS_REGION);
 
 // Google provider — the only sign-in method in Phase 1.5.
 export const googleProvider = new GoogleAuthProvider();
@@ -42,14 +48,16 @@ export function connectEmulatorsOnce(): void {
   const authUrl = env.VITE_EMULATOR_AUTH_URL ?? "http://127.0.0.1:9099";
   const fsHost = env.VITE_EMULATOR_FIRESTORE_HOST ?? "127.0.0.1";
   const fsPort = Number(env.VITE_EMULATOR_FIRESTORE_PORT ?? "8080");
+  const fnPort = Number(env.VITE_EMULATOR_FUNCTIONS_PORT ?? "5001");
 
   // `disableWarnings` keeps the console clean — the banner is informational.
   connectAuthEmulator(auth, authUrl, { disableWarnings: true });
   connectFirestoreEmulator(db, fsHost, fsPort);
+  connectFunctionsEmulator(functions, fsHost, fnPort);
 
   // eslint-disable-next-line no-console
   console.info(
-    `[iEye] Firebase emulators connected — Auth ${authUrl}, Firestore ${fsHost}:${fsPort}`
+    `[iEye] Firebase emulators connected — Auth ${authUrl}, Firestore ${fsHost}:${fsPort}, Functions ${fsHost}:${fnPort}`
   );
 }
 

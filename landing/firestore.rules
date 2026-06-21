@@ -39,6 +39,11 @@ rules_version = '2';
 //      - consent-log integrity (notice version + timestamp) for the supporter wall (#38 §4)
 //      - minting/revoking the `admin` custom claim
 //      - building the publicSupporters projection from consented users + contributions
+//
+//    Backend-only collections (NO allow rule — held shut by the default-deny
+//    block, written exclusively via the Admin SDK): adminAudit, mail,
+//    consentLog (tamper-evident consent record), supporterIndex (private
+//    uid -> public-projection-id map; keeps the public wall non-correlatable).
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -68,6 +73,11 @@ service cloud.firestore {
     // future, careless rule or backend might mistake for authz.
     function hasNoPrivilegeEscalation() {
       return !incoming().keys().hasAny(['admin', 'role', 'roles', 'isAdmin', 'claims', 'customClaims']);
+    }
+
+    // Ordinal of a contributorRequest status, for forward-only transitions.
+    function statusRank(s) {
+      return s == 'invited' ? 2 : (s == 'vetted' ? 1 : 0);
     }
 
     // ---- users ----------------------------------------------------------
@@ -137,8 +147,15 @@ service cloud.firestore {
                     && incoming().status == 'requested'
                     && hasNoPrivilegeEscalation();
 
-      // Only admins move a request forward (vet / invite) or edit it.
-      allow update: if isAdmin();
+      // Only admins update a request, and even an admin client may ONLY move
+      // status forward (requested -> vetted -> invited) and may NEVER rewrite
+      // the immutable owner. This is now a STRUCTURAL guarantee, not just trust
+      // in the admin UI — a compromised admin session still can't regress a
+      // status or reassign a request to another person. (The Admin SDK / the
+      // invitation Function bypass rules and own the invitedAt stamp.)
+      allow update: if isAdmin()
+                    && incoming().ownerUid == existing().ownerUid
+                    && statusRank(incoming().status) >= statusRank(existing().status);
 
       allow delete: if isAdmin();
     }

@@ -1,0 +1,21 @@
+{
+  "name": "ieye-functions",
+  "description": "iEye web backend — non-money Cloud Functions (admin claims, public supporter projection, contributor invitations)",
+  "private": true,
+  "engines": {
+    "node": "22"
+  },
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "serve": "npm run build && firebase emulators:start --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
