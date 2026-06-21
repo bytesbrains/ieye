@@ -4,10 +4,11 @@ The iEye welfare/liveness app — iOS + Android. *If someone who lives alone goe
 silent, the people they chose are alerted, so they are found in hours, not weeks.*
 Spec: **PRD #2**; product principles: **#1**; constraints: repo `CLAUDE.md`.
 
-> **Status: initial scaffold (product spine).** Runnable skeleton + the core
-> architecture seams. The detection brain is a Tier-0 **stub** (no real sensors
-> yet) and **no trigger sink is fired** — the prototype signs nothing and sends
-> nothing off-device, per the green-light.
+> **Status: Tier-0 prototype.** The product spine + the real phone-only rhythm
+> rule are wired end-to-end behind the seams. The only stub left is the platform
+> signal *source* (battery/activity need a plugin), and **no trigger sink is
+> fired** — the prototype signs nothing and sends nothing off-device, per the
+> green-light.
 
 ## What's here
 
@@ -27,13 +28,15 @@ lib/
     coverage.dart           honest coverage state (no fake "protected" boolean)
     checker.dart            checker consent state (#17) — active accept, no silent enrolment
     circle.dart             the circle + coverage maths (#18); CircleStore (resign/undo)
+    delivery_mode.dart      Easy/Sovereign + the mode-aware honest promise (#25)
   features/
     onboarding/             two-role entry: "for myself" / "for someone I care about"
+    arming/                 comprehension gate (#25) — three truths + "found, not rescued" before arming
     home/                   honest-coverage home + the "going dark" flow (PRD §3C)
     checker/                checker consent handshake — invite → accept → availability → rehearsal (#17)
     circle/                 circle visibility + graceful step-down (#18)
 test/widget_test.dart       unit/guardrail tests
-integration_test/           on-device E2E: app_test, tier0_test, checker_test, circle_test (+ finders.dart)
+integration_test/           on-device E2E: app_test, arming_test, tier0_test, checker_test, circle_test (+ finders.dart)
 ```
 
 Coverage is read through one boundary — `DetectionBrain` composes it from sensing
@@ -68,7 +71,7 @@ Run the on-device E2E: `flutter test integration_test -d <device-id>`.
 
 ## Next slices
 
-- Comprehension gate before arming (#25); honest home for the configurer (#27).
+- Honest home for the configurer / circle dashboard (#27).
 - Real platform `PhoneSignalsSource` (battery + activity + background pings) behind
   the seam; Rung-0 silent pre-check + battery-death labelling (#13); background-
   execution reliability (#15).

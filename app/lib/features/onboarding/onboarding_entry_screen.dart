@@ -50,7 +50,7 @@ class OnboardingEntryScreen extends StatelessWidget {
                                 'You just live. iEye reads signs of life and tells the people '
                                 'you chose if you ever go quiet.',
                             onTap:
-                                () => Navigator.of(context).pushNamed('/home'),
+                                () => Navigator.of(context).pushNamed('/arm'),
                           ),
                           const SizedBox(height: 16),
                           _RoleCard(
@@ -59,7 +59,7 @@ class OnboardingEntryScreen extends StatelessWidget {
                                 'For a parent or someone who may never open the app. You set up '
                                 'the circle and the details; they just live.',
                             onTap:
-                                () => Navigator.of(context).pushNamed('/home'),
+                                () => Navigator.of(context).pushNamed('/arm'),
                           ),
                           const Spacer(),
                           Text(
