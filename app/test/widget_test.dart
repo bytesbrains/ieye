@@ -13,6 +13,18 @@ import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
 import 'package:ieye/features/home/home_screen.dart';
 
+/// A delivery boundary that CAN reach off-device — stands in for a real Easy /
+/// Sovereign sink so the watching happy-path is testable without the no-op sink
+/// honestly degrading coverage. Fires nothing; only its [sendsOffDevice] matters.
+class _ReachSink implements TriggerSink {
+  @override
+  String get name => 'Reaching (test)';
+  @override
+  bool get sendsOffDevice => true;
+  @override
+  Future<void> fire(WelfareSignal signal) async {}
+}
+
 void main() {
   testWidgets('onboarding offers both roles (buyer ≠ watched)', (tester) async {
     await tester.pumpWidget(const IEyeApp());
@@ -24,7 +36,10 @@ void main() {
   testWidgets('home shows honest coverage, never a green "protected" shield', (
     tester,
   ) async {
-    final brain = Tier0Brain();
+    // A reaching sink + safe demo circle + healthy signals → the full watching
+    // state, so we can assert that even at its most reassuring the home never
+    // claims "protected".
+    final brain = Tier0Brain(sink: _ReachSink());
     addTearDown(brain.dispose);
 
     await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));
@@ -35,6 +50,29 @@ void main() {
     // Over-trust guardrail (PRD §7): we never claim "protected".
     expect(find.textContaining('protected'), findsNothing);
   });
+
+  testWidgets(
+    'home degrades honestly when no alert can leave the phone (#27)',
+    (tester) async {
+      // The signs-nothing prototype's real boundary: a no-op sink that can't
+      // reach off-device. Sensing is fine, but no one would be told — so the home
+      // must NOT show the watching all-clear; it degrades and says so.
+      final brain = Tier0Brain(sink: LocalNoopSink());
+      addTearDown(brain.dispose);
+
+      await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Watching over you.'), findsNothing);
+      expect(find.textContaining('you should know something'), findsOneWidget);
+      // The reach truth is surfaced, not hidden — in the amber note AND the
+      // limits section, so a sensing caveat can never bury it.
+      expect(find.textContaining('no alert would go out'), findsOneWidget);
+      expect(find.textContaining('can’t send an alert off this phone'),
+          findsOneWidget);
+      expect(find.textContaining('protected'), findsNothing);
+    },
+  );
 
   testWidgets('going dark pauses the watch and says it is planned', (
     tester,
@@ -305,7 +343,14 @@ void main() {
       final circle = CircleStore(demoCircleMembers());
       addTearDown(signals.dispose);
       addTearDown(circle.dispose);
-      final brain = Tier0Brain(signals: signals, circle: circle, now: fixedNow);
+      // Reaching sink so the degrade is unambiguously the sensing silence, not the
+      // reach gap.
+      final brain = Tier0Brain(
+        signals: signals,
+        circle: circle,
+        sink: _ReachSink(),
+        now: fixedNow,
+      );
       addTearDown(brain.dispose);
 
       expect(brain.current.status, CoverageStatus.degraded);
@@ -320,7 +365,12 @@ void main() {
       final circle = CircleStore(demoCircleMembers());
       addTearDown(signals.dispose);
       addTearDown(circle.dispose);
-      final brain = Tier0Brain(signals: signals, circle: circle, now: fixedNow);
+      final brain = Tier0Brain(
+        signals: signals,
+        circle: circle,
+        sink: _ReachSink(),
+        now: fixedNow,
+      );
       addTearDown(brain.dispose);
 
       final seen = <CoverageStatus>[];
@@ -335,6 +385,81 @@ void main() {
       expect(seen.first, CoverageStatus.watching);
       expect(seen.where((s) => s == CoverageStatus.degraded), isNotEmpty);
       expect(seen.length, greaterThanOrEqualTo(3)); // initial + 2 changes
+    });
+  });
+
+  group('honest reach — coverage through the delivery boundary (#27)', () {
+    PhoneSignals healthy() => PhoneSignals(
+      lastInteraction: DateTime(2026, 6, 22, 12, 0).subtract(
+        const Duration(minutes: 5),
+      ),
+      batteryPercent: 80,
+      charging: false,
+      reachable: true,
+    );
+    DateTime fixedNow() => DateTime(2026, 6, 22, 12, 0);
+
+    Tier0Brain brainWith(TriggerSink sink) {
+      final signals = StubPhoneSignalsSource(healthy());
+      final circle = CircleStore(demoCircleMembers()); // safe by default
+      addTearDown(signals.dispose);
+      addTearDown(circle.dispose);
+      final brain = Tier0Brain(
+        signals: signals,
+        circle: circle,
+        sink: sink,
+        now: fixedNow,
+      );
+      addTearDown(brain.dispose);
+      return brain;
+    }
+
+    test(
+      'a no-off-device sink degrades even when sensing + circle are fine',
+      () {
+        final c = brainWith(LocalNoopSink()).current;
+        // Sensing healthy, circle safe — yet no one could be told, so NOT a
+        // watching all-clear. This is the structural anti-fake-green-shield rule.
+        expect(c.canSummonHelp, isFalse);
+        expect(c.status, CoverageStatus.degraded);
+        expect(c.note, contains('no alert would go out'));
+      },
+    );
+
+    test('a reaching sink with a safe circle is the full watching state', () {
+      final c = brainWith(_ReachSink()).current;
+      expect(c.canSummonHelp, isTrue);
+      expect(c.status, CoverageStatus.watching);
+      expect(c.note, isNull);
+    });
+
+    test('a sensing problem outranks the reach gap for the single note slot', () {
+      // Lost contact (most urgent, act-now) wins the note even though reach is
+      // also down — but the reach truth still rides along in canSummonHelp so the
+      // UI can surface it separately and never hide it.
+      final signals = StubPhoneSignalsSource(
+        PhoneSignals(
+          lastInteraction: fixedNow().subtract(const Duration(minutes: 5)),
+          batteryPercent: 80,
+          charging: false,
+          reachable: false, // lost contact
+        ),
+      );
+      final circle = CircleStore(demoCircleMembers());
+      addTearDown(signals.dispose);
+      addTearDown(circle.dispose);
+      final brain = Tier0Brain(
+        signals: signals,
+        circle: circle,
+        sink: LocalNoopSink(),
+        now: fixedNow,
+      );
+      addTearDown(brain.dispose);
+
+      final c = brain.current;
+      expect(c.status, CoverageStatus.degraded);
+      expect(c.note, contains('lost contact')); // sensing caveat wins the slot
+      expect(c.canSummonHelp, isFalse); // reach truth not lost
     });
   });
 }

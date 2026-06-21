@@ -32,7 +32,7 @@ void main() {
       (tester) async {
         final src = StubPhoneSignalsSource(signals());
         addTearDown(src.dispose);
-        final brain = Tier0Brain(signals: src); // brain owns a safe demo circle
+        final brain = Tier0Brain(signals: src, sink: ReachSink()); // brain owns a safe demo circle
         addTearDown(brain.dispose);
 
         await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));
@@ -53,7 +53,7 @@ void main() {
     ) async {
       final src = StubPhoneSignalsSource(signals());
       addTearDown(src.dispose);
-      final brain = Tier0Brain(signals: src);
+      final brain = Tier0Brain(signals: src, sink: ReachSink());
       addTearDown(brain.dispose);
 
       await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));
@@ -72,7 +72,7 @@ void main() {
     ) async {
       final src = StubPhoneSignalsSource(signals());
       addTearDown(src.dispose);
-      final brain = Tier0Brain(signals: src);
+      final brain = Tier0Brain(signals: src, sink: ReachSink());
       addTearDown(brain.dispose);
 
       await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));

@@ -4,6 +4,7 @@ import 'circle.dart';
 import 'coverage.dart';
 import 'phone_signals.dart';
 import 'tier0_detector.dart';
+import 'trigger_sink.dart';
 
 /// The on-device detection brain (PRD §4, #11). Sensor fusion + a rhythm/anomaly
 /// model that watches at two speeds (slow silence / fast acute) and emits an
@@ -39,18 +40,32 @@ abstract interface class DetectionBrain {
 /// Coverage is read through THIS engine boundary only (mode-agnostic) — no UI
 /// computes it ad hoc, so a phone-only gap or a coverage drop can never be hidden
 /// (PRD §3D/§11: "ship the limits visibly, not the dream").
+///
+/// Coverage has TWO honest halves and the brain fuses both: can we DETECT a
+/// problem (the sensing engine + circle), and can we DELIVER help when we do (the
+/// [TriggerSink] boundary, #12). The delivery half is read through the sink's
+/// mode-agnostic [TriggerSink.sendsOffDevice] flag — never Easy-mode internals —
+/// so when nothing can leave the phone the home degrades honestly instead of
+/// showing a watching all-clear no one would ever hear (PRD §6/§7).
 class Tier0Brain implements DetectionBrain {
   /// Injected [circle]/[signals] are owned by the caller (the brain only listens).
   /// Omitted ones are created and owned (and disposed) by the brain.
+  ///
+  /// [sink] is the active delivery boundary whose reach folds into coverage. It
+  /// defaults to the signs-nothing [LocalNoopSink] — the honest truth of the
+  /// green-lit prototype: it can watch, but it cannot yet summon anyone, and the
+  /// home must say so.
   Tier0Brain({
     CircleStore? circle,
     PhoneSignalsSource? signals,
+    TriggerSink? sink,
     Tier0Detector detector = const Tier0Detector(),
     DateTime Function() now = DateTime.now,
   }) : _circle = circle ?? CircleStore(demoCircleMembers()),
        _ownsCircle = circle == null,
        _signals = signals ?? StubPhoneSignalsSource(),
        _ownsSignals = signals == null,
+       _sink = sink ?? LocalNoopSink(),
        _detector = detector,
        _now = now {
     _circle.addListener(_recompose);
@@ -65,6 +80,9 @@ class Tier0Brain implements DetectionBrain {
   final bool _ownsCircle;
   final PhoneSignalsSource _signals;
   final bool _ownsSignals;
+  // The delivery boundary (#12). The brain only reads its reach capability
+  // ([sendsOffDevice]); it never fires it here — the prototype signs nothing.
+  final TriggerSink _sink;
   final Tier0Detector _detector;
   // Injectable clock for deterministic tests. NOTE: coverage is only re-evaluated
   // when the circle or signals notify — there is no periodic tick yet, so the
@@ -91,6 +109,9 @@ class Tier0Brain implements DetectionBrain {
     final c = _circle.circle;
     final a = _detector.assess(_signals.current, _now());
 
+    // Can an alert actually leave this phone? Read once, through the boundary.
+    final canDeliver = _sink.sendsOffDevice;
+
     if (_paused) {
       // Deliberate: while "going dark", being unreachable is EXPECTED (the owner
       // told us they're away), so we don't surface lostContact/silence here —
@@ -101,6 +122,7 @@ class Tier0Brain implements DetectionBrain {
         batteryPercent: a.batteryPercent,
         checkerCount: c.total,
         checkersNearby: c.canReachFastCount,
+        canSummonHelp: canDeliver,
         goingDarkUntil: _goingDarkUntil,
         note:
             'Paused until ${_friendlyDate(_goingDarkUntil!)} — your circle will '
@@ -108,21 +130,37 @@ class Tier0Brain implements DetectionBrain {
       );
     }
 
-    // A sensing problem (the person/phone) is more urgent than a circle gap, so
-    // its honest caveat wins the single note slot; otherwise fall back to the
-    // circle's coverage note. Either degrades the status — never a false watching.
+    // Three honest ways coverage degrades, in priority order for the single note
+    // slot. A sensing problem (the person/phone) is the most urgent thing the
+    // owner must act on, so it wins. Next, "we can't reach anyone off this phone"
+    // — sensing may be fine, but no alert would ever go out, so we must NOT show a
+    // watching all-clear (the structural anti-fake-green-shield rule). Last, a
+    // circle gap. ANY of the three degrades the status — never a false watching.
     final sensingDegraded = !a.isHealthy;
-    final note = sensingDegraded ? a.limitNote : c.coverageNote;
-    final degraded = sensingDegraded || !c.isSafe;
+    final note =
+        sensingDegraded
+            ? a.limitNote
+            : !canDeliver
+            ? _noReachNote
+            : c.coverageNote;
+    final degraded = sensingDegraded || !canDeliver || !c.isSafe;
     return CoverageState(
       status: degraded ? CoverageStatus.degraded : CoverageStatus.watching,
       lastSignOfLife: a.lastSignOfLife,
       batteryPercent: a.batteryPercent,
       checkerCount: c.total,
       checkersNearby: c.canReachFastCount,
+      canSummonHelp: canDeliver,
       note: note,
     );
   }
+
+  /// The honest reach gap (PRD §6): iEye can watch, but with no off-device sink
+  /// nothing it notices would ever reach a human. Promise the mechanism, never an
+  /// outcome — say plainly that no alert would go out.
+  static const String _noReachNote =
+      'iEye can notice if you go quiet, but it can’t reach anyone off this phone '
+      'yet — so no alert would go out. This turns on when delivery is set up.';
 
   void _recompose() => _emit(_compose());
 

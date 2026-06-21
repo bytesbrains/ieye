@@ -4,6 +4,7 @@ import 'core/checker.dart';
 import 'core/circle.dart';
 import 'core/delivery_mode.dart';
 import 'core/detection_brain.dart';
+import 'core/trigger_sink.dart';
 import 'features/arming/comprehension_gate_screen.dart';
 import 'features/checker/checker_invite_screen.dart';
 import 'features/circle/circle_screen.dart';
@@ -25,7 +26,14 @@ class _IEyeAppState extends State<IEyeApp> {
   // One circle, shared: the brain reads coverage from it, the circle screen edits
   // it — so a resignation flows straight into owner-visible coverage (#18).
   final CircleStore _circle = CircleStore(demoCircleMembers());
-  late final DetectionBrain _brain = Tier0Brain(circle: _circle);
+  // The green-lit prototype signs nothing and sends nothing off-device, so the
+  // delivery boundary is the no-op sink. The brain folds its (lack of) reach into
+  // honest coverage, so the home tells the truth: it can watch, but can't yet
+  // summon anyone — no fake green shield (#27).
+  late final DetectionBrain _brain = Tier0Brain(
+    circle: _circle,
+    sink: LocalNoopSink(),
+  );
 
   @override
   void dispose() {

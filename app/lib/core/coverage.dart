@@ -27,6 +27,7 @@ class CoverageState {
     this.batteryPercent,
     this.checkerCount = 0,
     this.checkersNearby = 0,
+    this.canSummonHelp = true,
     this.note,
     this.goingDarkUntil,
   });
@@ -36,6 +37,15 @@ class CoverageState {
   final int? batteryPercent;
   final int checkerCount;
   final int checkersNearby;
+
+  /// Can iEye actually get an alert OFF this phone to the people watching? Read
+  /// through the delivery boundary ([TriggerSink.sendsOffDevice], #12) — NOT from
+  /// any one mode's internals, so the same surface tells the truth for Easy and
+  /// Sovereign alike. When false, sensing may be fine but no one would be told, so
+  /// coverage is [CoverageStatus.degraded] — never a watching all-clear. This is
+  /// the structural anti-"fake green shield" rule (PRD §6/§7): the UI must never
+  /// overclaim reach.
+  final bool canSummonHelp;
 
   /// Plain-language truth for degraded/paused states (e.g. "Battery may have
   /// died — we’ll say so rather than pretend"). Shown verbatim; never spun green.
@@ -49,6 +59,7 @@ class CoverageState {
     int? batteryPercent,
     int? checkerCount,
     int? checkersNearby,
+    bool? canSummonHelp,
     String? note,
     DateTime? goingDarkUntil,
   }) {
@@ -58,6 +69,7 @@ class CoverageState {
       batteryPercent: batteryPercent ?? this.batteryPercent,
       checkerCount: checkerCount ?? this.checkerCount,
       checkersNearby: checkersNearby ?? this.checkersNearby,
+      canSummonHelp: canSummonHelp ?? this.canSummonHelp,
       note: note ?? this.note,
       goingDarkUntil: goingDarkUntil ?? this.goingDarkUntil,
     );

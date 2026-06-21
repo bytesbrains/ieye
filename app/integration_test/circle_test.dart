@@ -78,7 +78,9 @@ void main() {
       tester,
     ) async {
       final store = CircleStore(demoCircleMembers());
-      final brain = Tier0Brain(circle: store);
+      // Reaching sink so the test isolates the CIRCLE coverage drop; the no-op
+      // sink's reach gap (#27) is exercised separately.
+      final brain = Tier0Brain(circle: store, sink: ReachSink());
       addTearDown(brain.dispose);
 
       await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));

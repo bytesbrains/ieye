@@ -33,7 +33,12 @@ void main() {
       await pumpApp(tester);
       await goToHomeAsMyself(tester);
 
-      expect(watchingHeadline, findsOneWidget);
+      // The prototype can sense but can't yet reach anyone off-device, so the
+      // honest home degrades and SAYS no alert would go out — never a watching
+      // all-clear no one would hear (#27, read through the TriggerSink boundary).
+      expect(degradedHeadline, findsWidgets);
+      expect(reachGapNote, findsWidgets);
+      expect(watchingHeadline, findsNothing); // no fake watching all-clear
       expect(lastSignOfLife, findsOneWidget);
       expect(peopleWatching, findsWidgets);
       expect(
@@ -65,7 +70,10 @@ void main() {
 
       await tester.tap(resumeButton);
       await tester.pumpAndSettle();
-      expect(watchingHeadline, findsOneWidget);
+      // Resuming returns to the honest pre-pause state — degraded, because the
+      // prototype still can't reach off-device; never a fake watching all-clear.
+      expect(degradedHeadline, findsWidgets);
+      expect(pausedHeadline, findsNothing);
     });
   });
 
@@ -81,7 +89,8 @@ void main() {
       expect(gravityGate, findsOneWidget);
       await passComprehensionGate(tester);
 
-      expect(watchingHeadline, findsOneWidget);
+      // Lands on the honest home (degraded — no off-device reach yet, #27).
+      expect(degradedHeadline, findsWidgets);
     });
   });
 }
