@@ -41,6 +41,16 @@ void main() {
         findsNothing,
       ); // over-trust guardrail (PRD §7)
     });
+
+    testWidgets('a role cannot bypass the comprehension gate', (tester) async {
+      await pumpApp(tester);
+      await tester.tap(forMyself);
+      await tester.pumpAndSettle();
+
+      // Over-trust is risk #1: arming MUST go through the gate, never straight home.
+      expect(gravityGate, findsOneWidget);
+      expect(watchingHeadline, findsNothing);
+    });
   });
 
   group('going dark (the biggest alarm-fatigue killer)', () {
@@ -60,10 +70,17 @@ void main() {
   });
 
   group('caregiver flow', () {
-    testWidgets('"for someone I care about" also reaches home', (tester) async {
+    testWidgets('"for someone I care about" goes through the gate to home', (
+      tester,
+    ) async {
       await pumpApp(tester);
       await tester.tap(forSomeone);
       await tester.pumpAndSettle();
+
+      // Both roles must pass the comprehension gate before arming (#25).
+      expect(gravityGate, findsOneWidget);
+      await passComprehensionGate(tester);
+
       expect(watchingHeadline, findsOneWidget);
     });
   });

@@ -29,9 +29,30 @@ final pausedHeadline = find.textContaining('Paused');
 // Over-trust guardrail (PRD §7): this word must NEVER appear on the home screen.
 final fakeProtectedShield = find.textContaining('protected');
 
-/// From onboarding, enter the home screen via the "for myself" role.
+// ---- comprehension gate before arming (#25) ----
+final gravityGate = find.textContaining('Slow down');
+final foundNotRescued = find.textContaining('doesn’t save you');
+final microCheck = find.textContaining('finds me, it doesn’t save me');
+final armButton = find.text('Start watching over me');
+
+/// From onboarding, pick a role and pass through the comprehension gate (ack the
+/// "found, not rescued" micro-check, then arm) to reach the home.
 Future<void> goToHomeAsMyself(WidgetTester tester) async {
   await tester.tap(forMyself);
+  await tester.pumpAndSettle();
+  await passComprehensionGate(tester);
+}
+
+/// Acknowledge the "found, not rescued" micro-check and arm. The gate scrolls, so
+/// bring controls on-screen before tapping.
+Future<void> passComprehensionGate(WidgetTester tester) async {
+  await tester.ensureVisible(microCheck);
+  await tester.pumpAndSettle();
+  await tester.tap(microCheck); // acknowledge "found, not rescued"
+  await tester.pumpAndSettle();
+  await tester.ensureVisible(armButton);
+  await tester.pumpAndSettle();
+  await tester.tap(armButton); // no arm without the ack
   await tester.pumpAndSettle();
 }
 

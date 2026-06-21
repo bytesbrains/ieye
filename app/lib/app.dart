@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 
 import 'core/checker.dart';
 import 'core/circle.dart';
+import 'core/delivery_mode.dart';
 import 'core/detection_brain.dart';
+import 'features/arming/comprehension_gate_screen.dart';
 import 'features/checker/checker_invite_screen.dart';
 import 'features/circle/circle_screen.dart';
 import 'features/home/home_screen.dart';
@@ -41,6 +43,19 @@ class _IEyeAppState extends State<IEyeApp> {
       initialRoute: '/',
       routes: {
         '/': (_) => const OnboardingEntryScreen(),
+        // Comprehension gate before arming (#25): no arm without acknowledging
+        // "found, not rescued". On arm → the honest-coverage home.
+        '/arm':
+            (context) => ComprehensionGateScreen(
+              mode:
+                  DeliveryMode
+                      .easy, // explicit; Sovereign is a V1 coming-soon shell
+              // Make home a root on arm — no back-door to onboarding / re-arm.
+              onArmed:
+                  () => Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/home', (route) => false),
+            ),
         '/home': (_) => HomeScreen(brain: _brain),
         // Checkers arrive here from an invite link (#17). Demo invite until real
         // invites are wired; the handshake itself is fully functional.

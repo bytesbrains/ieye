@@ -5,6 +5,7 @@ import 'package:ieye/app.dart';
 import 'package:ieye/core/checker.dart';
 import 'package:ieye/core/circle.dart';
 import 'package:ieye/core/coverage.dart';
+import 'package:ieye/core/delivery_mode.dart';
 import 'package:ieye/core/detection_brain.dart';
 import 'package:ieye/core/phone_signals.dart';
 import 'package:ieye/core/tier0_detector.dart';
@@ -266,6 +267,21 @@ void main() {
     test('lost contact dominates low battery', () {
       final a = detector.assess(sig(battery: 5, reachable: false), now);
       expect(a.status, SensingStatus.lostContact);
+    });
+  });
+
+  group('delivery-mode honest promise (#25)', () {
+    test('Easy promises reach + server-dependency, never "inevitable"', () {
+      final easy = DeliveryMode.easy.honestPromise;
+      expect(easy.toLowerCase(), contains('servers'));
+      expect(easy.toLowerCase(), isNot(contains('inevitable')));
+    });
+
+    test('Sovereign states the on-chain reality', () {
+      expect(
+        DeliveryMode.sovereign.honestPromise,
+        contains('public and permanent'),
+      );
     });
   });
 
