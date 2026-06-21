@@ -40,6 +40,9 @@ export function Footer() {
               <a href="#contribute" className="text-charcoal-soft hover:text-charcoal">
                 Ways to help
               </a>
+              <a href="#transparency" className="text-charcoal-soft hover:text-charcoal">
+                Transparency
+              </a>
             </nav>
           </div>
 

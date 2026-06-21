@@ -5,6 +5,7 @@ const NAV = [
   { href: "#how-it-works", label: "How it works" },
   { href: "#trust", label: "Trust & privacy" },
   { href: "#contribute", label: "Ways to help" },
+  { href: "#transparency", label: "Transparency" },
 ];
 
 export function Header() {
