@@ -30,7 +30,9 @@ class OnboardingEntryScreen extends StatelessWidget {
                               const SizedBox(width: 14),
                               Text(
                                 'iEye',
-                                style: text.displaySmall?.copyWith(fontSize: 40),
+                                style: text.displaySmall?.copyWith(
+                                  fontSize: 40,
+                                ),
                               ),
                             ],
                           ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ieye/app.dart';
+import 'package:ieye/core/checker.dart';
 import 'package:ieye/core/detection_brain.dart';
 import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
@@ -72,4 +73,52 @@ void main() {
       expect(atDoor.addressNote, 'side gate');
     },
   );
+
+  group('checker consent (#17 — no silent enrolment)', () {
+    test('is active only after accept + availability + rehearsal', () {
+      const noAccept = CheckerConsent(
+        accepted: false,
+        reach: CheckerReach.canGoInPerson,
+        rehearsalCompleted: true,
+      );
+      const noReach = CheckerConsent(
+        accepted: true,
+        reach: null,
+        rehearsalCompleted: true,
+      );
+      const noRehearsal = CheckerConsent(
+        accepted: true,
+        reach: CheckerReach.callOnly,
+        rehearsalCompleted: false,
+      );
+      expect(noAccept.isActive, isFalse);
+      expect(noReach.isActive, isFalse);
+      expect(noRehearsal.isActive, isFalse);
+
+      const full = CheckerConsent(
+        accepted: true,
+        reach: CheckerReach.callOnly,
+        rehearsalCompleted: true,
+      );
+      expect(full.isActive, isTrue);
+    });
+
+    test(
+      'only an in-person checker is eligible for the physical-check rung',
+      () {
+        const inPerson = CheckerConsent(
+          accepted: true,
+          reach: CheckerReach.canGoInPerson,
+          rehearsalCompleted: true,
+        );
+        const callOnly = CheckerConsent(
+          accepted: true,
+          reach: CheckerReach.callOnly,
+          rehearsalCompleted: true,
+        );
+        expect(inPerson.eligibleForPhysicalCheck, isTrue);
+        expect(callOnly.eligibleForPhysicalCheck, isFalse);
+      },
+    );
+  });
 }

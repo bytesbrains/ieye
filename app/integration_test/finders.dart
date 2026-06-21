@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ieye/app.dart';
+import 'package:ieye/core/checker.dart';
+import 'package:ieye/features/checker/checker_invite_screen.dart';
 
 /// Shared E2E helpers. Keep finders + flows here so each new feature test reads
 /// like prose and we don't duplicate brittle lookups as the app grows. Add a
@@ -32,3 +34,42 @@ Future<void> goToHomeAsMyself(WidgetTester tester) async {
   await tester.tap(forMyself);
   await tester.pumpAndSettle();
 }
+
+// ---- checker consent handshake (#17) ----
+
+/// Captures the consent produced by the handshake, for assertions.
+CheckerConsent? lastCheckerConsent;
+
+/// Pump the checker invite screen standalone (checkers arrive via a link).
+Future<void> pumpCheckerInvite(
+  WidgetTester tester, {
+  String owner = 'Sandeep',
+}) async {
+  lastCheckerConsent = null;
+  await tester.pumpWidget(
+    MaterialApp(
+      home: CheckerInviteScreen(
+        invite: CheckerInvite(ownerName: owner),
+        onAccepted: (c) => lastCheckerConsent = c,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
+final inviteExpectation = find.textContaining(
+  'contacted if their phone goes silent',
+);
+// Scoped to the accept *button* — the expectation paragraph also contains
+// "be one of …", so match the button's unique "Yes, I…" opener instead.
+final acceptInvite = find.textContaining('Yes, I');
+final declineInvite = find.textContaining('right now'); // "I can't right now"
+final reachInPerson = find.text('I can go check in person');
+final reachCallOnly = find.text('I can call or message');
+final continueButton = find.text('Continue');
+final practiceBadge = find.text('PRACTICE');
+final seenDrill = find.textContaining('seen the drill');
+final handshakeDone = find.textContaining(
+  'people now',
+); // "…one of X's people now."
+final declinedHeadline = find.textContaining('No problem');
