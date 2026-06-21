@@ -7,6 +7,7 @@ import 'package:ieye/core/circle.dart';
 import 'package:ieye/core/coverage.dart';
 import 'package:ieye/core/delivery_mode.dart';
 import 'package:ieye/core/detection_brain.dart';
+import 'package:ieye/core/liveness_source.dart';
 import 'package:ieye/core/phone_signals.dart';
 import 'package:ieye/core/tier0_detector.dart';
 import 'package:ieye/core/trigger_sink.dart';
@@ -24,6 +25,37 @@ class _ReachSink implements TriggerSink {
   @override
   Future<void> fire(WelfareSignal signal) async {}
 }
+
+/// A liveness source whose verdict the test sets directly — so the fusion brain
+/// can be driven with N honest sources (phone + home + …) deterministically.
+class _FixedSource extends LivenessSource {
+  _FixedSource(this._a);
+  LivenessAssessment _a;
+  void set(LivenessAssessment a) {
+    _a = a;
+    notifyListeners();
+  }
+
+  @override
+  String get label => _a.label;
+  @override
+  LivenessAssessment assess(DateTime now) => _a;
+}
+
+/// Build a [LivenessAssessment] tersely for fusion tests.
+LivenessAssessment _verdict(
+  LivenessStatus status, {
+  DateTime? at,
+  int? battery,
+  String? note,
+  String label = 'a sensor',
+}) => LivenessAssessment(
+  status: status,
+  lastSignOfLife: at,
+  batteryPercent: battery,
+  limitNote: note,
+  label: label,
+);
 
 void main() {
   testWidgets('onboarding offers both roles (buyer ≠ watched)', (tester) async {
@@ -460,6 +492,96 @@ void main() {
       expect(c.status, CoverageStatus.degraded);
       expect(c.note, contains('lost contact')); // sensing caveat wins the slot
       expect(c.canSummonHelp, isFalse); // reach truth not lost
+    });
+  });
+
+  group('multi-source fusion rule (#62)', () {
+    final t = DateTime(2026, 6, 22, 12, 0);
+
+    test('corroboration suppresses the battery-death false alarm', () {
+      // Phone battery is dead (lost contact) BUT the home still sees life. The
+      // person is alive — so this must NOT escalate to a silence alarm; it
+      // degrades to an honest heads-up with the home's fresh sign of life.
+      final fused = fuseLiveness([
+        _verdict(LivenessStatus.lostContact, battery: 0, label: 'your phone'),
+        _verdict(LivenessStatus.alive, at: t, label: 'your home'),
+      ]);
+      expect(fused.status, LivenessStatus.degraded); // not silent / lostContact
+      expect(fused.isAlive, isFalse); // still a heads-up, never a clean all-clear
+      expect(fused.lastSignOfLife, t); // the living source's fresh sign
+      expect(fused.limitNote, contains('isn’t an emergency'));
+    });
+
+    test('genuine multi-source silence escalates', () {
+      // No source sees life — the real "go check" path. The most urgent signal
+      // (lost contact) stands.
+      final fused = fuseLiveness([
+        _verdict(LivenessStatus.silent, at: t, label: 'your phone'),
+        _verdict(LivenessStatus.lostContact, label: 'your home'),
+      ]);
+      expect(fused.corroboratesLife, isFalse);
+      expect(fused.status, LivenessStatus.lostContact); // worst signal wins
+    });
+
+    test('any unhealthy source degrades — never a false alive', () {
+      // One source alive, one battery-low: corroborated alive, but the caveat is
+      // surfaced and the verdict is degraded, not a clean watching.
+      final fused = fuseLiveness([
+        _verdict(LivenessStatus.alive, at: t, label: 'your home'),
+        _verdict(
+          LivenessStatus.degraded,
+          at: t,
+          battery: 8,
+          note: 'Battery low.',
+          label: 'your phone',
+        ),
+      ]);
+      expect(fused.status, LivenessStatus.degraded);
+      expect(fused.limitNote, contains('Battery low')); // the caveat is surfaced
+      expect(fused.batteryPercent, 8); // lowest reported battery surfaces
+    });
+
+    test('all sources alive → a clean, caveat-free sign of life', () {
+      final fused = fuseLiveness([
+        _verdict(LivenessStatus.alive, at: t.subtract(const Duration(minutes: 9))),
+        _verdict(LivenessStatus.alive, at: t),
+      ]);
+      expect(fused.status, LivenessStatus.alive);
+      expect(fused.limitNote, isNull);
+      expect(fused.lastSignOfLife, t); // freshest living sign
+    });
+
+    test('FusionBrain composes N sources into honest coverage', () {
+      // Two sources through the real brain: phone dark, home alive → corroborated
+      // alive, so coverage degrades to a heads-up (not a silence escalation), and
+      // the displayed sign of life is the home's fresh one — read only through the
+      // engine boundary.
+      final phone = _FixedSource(
+        _verdict(LivenessStatus.lostContact, label: 'your phone'),
+      );
+      final home = _FixedSource(
+        _verdict(LivenessStatus.alive, at: t, label: 'your home'),
+      );
+      final circle = CircleStore(demoCircleMembers()); // safe
+      addTearDown(circle.dispose);
+      // The brain owns the sources it's given — no separate source teardown.
+      final brain = FusionBrain(
+        sources: [phone, home],
+        circle: circle,
+        sink: _ReachSink(),
+        now: () => t,
+      );
+      addTearDown(brain.dispose);
+
+      final c = brain.current;
+      expect(c.status, CoverageStatus.degraded);
+      expect(c.lastSignOfLife, t); // home's fresh sign, not the dead phone's
+      expect(c.note, contains('isn’t an emergency'));
+
+      // The home goes quiet too → now genuine multi-source silence escalates.
+      home.set(_verdict(LivenessStatus.silent, at: t, label: 'your home'));
+      expect(brain.current.status, CoverageStatus.degraded);
+      expect(brain.current.note, isNot(contains('isn’t an emergency')));
     });
   });
 }
