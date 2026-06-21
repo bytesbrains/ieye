@@ -8,7 +8,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   onIdTokenChanged,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut as fbSignOut,
   type User,
 } from "firebase/auth";
@@ -42,6 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Finalize any pending redirect sign-in. We use signInWithRedirect (not
+    // signInWithPopup): on *.web.app, COOP severs the popup's cross-window
+    // channel (window.closed polling + auth-iframe postMessage), so the popup
+    // opens, the user signs in, and the promise NEVER resolves — auth hangs.
+    // A redirect is a top-level navigation, immune to that. getRedirectResult
+    // completes the exchange on return and surfaces errors (e.g.
+    // auth/unauthorized-domain) that would otherwise be swallowed.
+    getRedirectResult(auth).catch((e) => {
+      console.error("[auth] redirect sign-in did not complete:", e);
+    });
+
     // onIdTokenChanged fires on sign-in, sign-out, AND token refresh — so a
     // newly-minted admin claim is picked up on the next refresh without a
     // separate onAuthStateChanged listener (which is a strict subset of this).
@@ -59,7 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin,
       loading,
       signInWithGoogle: async () => {
-        await signInWithPopup(auth, googleProvider);
+        // Navigates away to Google and back — the click handler's code after
+        // this await does not run (the page unloads). Signed-in state is picked
+        // up by getRedirectResult + onIdTokenChanged on return.
+        await signInWithRedirect(auth, googleProvider);
       },
       signOut: async () => {
         await fbSignOut(auth);

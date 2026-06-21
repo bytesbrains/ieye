@@ -342,7 +342,6 @@ function UsersList() {
               </div>
               <div className="text-right text-xs text-charcoal-muted">
                 <p>name: {u.optInDisplayName ? "opted-in" : "private"}</p>
-                <p>amount: {u.optInDisplayAmount ? "opted-in" : "private"}</p>
               </div>
             </li>
           ))}

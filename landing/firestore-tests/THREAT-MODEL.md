@@ -31,7 +31,7 @@ All documents live in a single Firestore database. Field names below are the con
 - Doc id **is** the Firebase Auth `uid` (immutable owner — there is no mutable owner field to tamper with).
 - `displayName`, `email`, `photoURL` — profile (mirrors Google profile; user-editable).
 - `optInDisplayName: bool` — opt-IN to show name on the public wall. **Default false.** (#36, #38 §4)
-- `optInDisplayAmount: bool` — opt-IN to show amount. **Default false.** Granular, separate from name (#38 §4).
+- **No amount opt-in.** The wall is **name-only** — opt-in to be named is **not** opt-in to be priced (#36, wall Version B). There is deliberately no `optInDisplayAmount`: a per-person amount can never be published, enforced structurally rather than by policy.
 - `consentVersion: string`, `consentAt: timestamp` — which privacy-notice version the user consented to, and when (evidence of lawful basis; #38 §4.5).
 - **NO `role` / `admin` / `claims` field.** Authorization is a custom claim, never data. Rules actively reject any client write that introduces such a field (defense in depth).
 
@@ -45,9 +45,10 @@ All documents live in a single Firestore database. Field names below are the con
 - **Clients NEVER write this collection.** Writes come only from trusted backend (payment webhook handler, admin reconciliation, on-chain indexer).
 
 ### `publicSupporters/{id}` — world-readable PROJECTION
-- A backend-built projection containing **ONLY consented, public fields** — e.g. `displayName` (only if `optInDisplayName`), `displayAmount` (only if `optInDisplayAmount`), `publishedAt`, `featured`.
+- A backend-built projection containing **ONLY the consented display name** — `displayName` (only if `optInDisplayName`), `publishedAt`, `featured`. **No amount field exists**, so the wall is structurally incapable of publishing a per-person figure (#36, "named ≠ priced").
 - Exists so rules **never have to crack open a private `users`/`contributions` doc** to render the public wall. The public wall reads this collection and nothing else.
 - World-readable by design (holds nothing private). Writable only by backend/admin.
+- **Legacy fields.** Docs written before the name-only switch (#36) may still carry an inert `displayAmount` (and `users` an inert `optInDisplayAmount`). Nothing reads them, rules refuse to add/change `optInDisplayAmount` going forward, and the projection is rebuilt with `set` (no merge) so it's dropped on the next rebuild. The one-time `functions/scripts/purge-legacy-amount.mjs` sweeps any that are never rebuilt.
 
 ### `contributorRequests/{id}` — request → vetted → invited (#36)
 - `ownerUid: string` — the requester (must equal `request.auth.uid` on create).
@@ -82,7 +83,7 @@ Firestore rules are necessary but not sufficient. The trusted backend is the onl
 
 1. **Ledger integrity** — `amountWei`/`asset`/`method` correctness, idempotent payment-webhook handling, reconciliation. Rules only guarantee *clients can't write* contributions; they can't validate that what the backend writes is *correct*.
 2. **AML / sanctions screening** on crypto inflows before commingling (#38 §5). Rules cannot screen on-chain provenance.
-3. **Consent-log integrity** — record `consentVersion` + `consentAt`, and build `publicSupporters` **strictly** from `optInDisplayName` / `optInDisplayAmount` (#38 §4). Rules let the user *flip* the flag; only the backend decides what actually gets published, and must honor withdrawal (remove from the wall going forward).
+3. **Consent-log integrity** — record `consentVersion` + `consentAt`, and build `publicSupporters` **strictly** from `optInDisplayName` (#38 §4). Rules let the user *flip* the flag; only the backend decides what actually gets published, and must honor withdrawal (remove from the wall going forward).
 4. **The on-chain-is-permanent caveat** (#38 §4/§5) — on-chain contributions can't be un-published; the consent UI/flow (not rules) must warn before send.
 5. **Minting/revoking admin claims** (see §4) — entirely outside rules.
 6. **Honesty guardrail** — copy says "contribution," never "donation"; never implies tax-deductibility (#38 §2). Enforced in product copy review, not rules.
@@ -104,6 +105,6 @@ Firestore rules are necessary but not sufficient. The trusted backend is the onl
 2. **Never expect a `role`/`admin` field on `users`.** Detect admin via the Firebase Auth ID-token custom claim (`getIdTokenResult()` → `claims.admin`), not a Firestore read. Treat the claim as the only source of admin truth.
 3. **Read the public wall from `publicSupporters` only** — never try to read other users' `users`/`contributions` docs to build it (rules will deny it anyway).
 4. **`contributorRequests` must be created with `ownerUid == auth.uid` and `status: 'requested'`.** The UI cannot set any later status; only admins advance it.
-5. **Opt-in-named toggles live on the user's own `users` doc** (`optInDisplayName`, `optInDisplayAmount`), default off. Flipping the flag is a *request to publish*; actual publication is backend-mediated.
+5. **Opt-in-named toggle lives on the user's own `users` doc** (`optInDisplayName`), default off. Flipping the flag is a *request to publish*; actual publication is backend-mediated. (Name-only — there is no amount toggle; #36.)
 6. **Profiles are private.** A user can only read their own `users` doc; build profile UI for the signed-in user only.
 7. **Admin claim minting is backend-only.** No client UI path may attempt to set custom claims.

@@ -10,6 +10,12 @@ import "./index.css";
 // so a first-time visitor to the landing page never downloads Firebase.
 const AuthShell = lazy(() => import("./auth/AuthShell"));
 
+// Designer-only #36 artifact — split into its own chunk so the landing page's
+// main bundle never carries the wall components or their mock data.
+const WallPreview = lazy(() =>
+  import("./pages/WallPreview").then((m) => ({ default: m.WallPreview }))
+);
+
 function Lazy({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
@@ -31,6 +37,15 @@ function Lazy({ children }: { children: React.ReactNode }) {
 //   /admin   -> admin shell           (lazy, RequireAdmin — admin custom claim)
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
+  // Designer comparison artifact for #36 — lazy-loaded (its own chunk, no Firebase).
+  {
+    path: "/wall-preview",
+    element: (
+      <Lazy>
+        <WallPreview />
+      </Lazy>
+    ),
+  },
   {
     path: "/signin",
     element: (

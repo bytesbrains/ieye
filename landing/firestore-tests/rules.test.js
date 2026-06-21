@@ -89,7 +89,6 @@ describe('users', () => {
       setDoc(doc(alice(), 'users/alice'), {
         displayName: 'Alice',
         optInDisplayName: true,
-        optInDisplayAmount: false,
         consentVersion: 'v1',
       })
     );
@@ -125,6 +124,50 @@ describe('users', () => {
     await seed((db) => setDoc(doc(db, 'users/alice'), { displayName: 'Alice' }));
     await assertFails(
       updateDoc(doc(alice(), 'users/alice'), { customClaims: { admin: true } })
+    );
+  });
+
+  // The amount opt-in was removed (#36, "named ≠ priced"). Rules now refuse to
+  // let the dead field come back as a live signal.
+  test('user CANNOT create a profile with the removed `optInDisplayAmount` field', async () => {
+    await assertFails(
+      setDoc(doc(alice(), 'users/alice'), {
+        displayName: 'Alice',
+        optInDisplayName: true,
+        optInDisplayAmount: true,
+      })
+    );
+  });
+
+  test('user CANNOT add `optInDisplayAmount` on update', async () => {
+    await seed((db) => setDoc(doc(db, 'users/alice'), { displayName: 'Alice' }));
+    await assertFails(
+      updateDoc(doc(alice(), 'users/alice'), { optInDisplayAmount: true })
+    );
+  });
+
+  test('user CANNOT change a legacy `optInDisplayAmount` value', async () => {
+    // Deployed-before-removal doc still carries an inert copy.
+    await seed((db) =>
+      setDoc(doc(db, 'users/alice'), { displayName: 'Alice', optInDisplayAmount: false })
+    );
+    await assertFails(
+      updateDoc(doc(alice(), 'users/alice'), { optInDisplayAmount: true })
+    );
+  });
+
+  test('a name/consent edit is NOT bricked by an inert legacy `optInDisplayAmount`', async () => {
+    // The legacy field carries through unchanged; the real edit (name opt-in)
+    // must still succeed so deployed users aren't locked out.
+    await seed((db) =>
+      setDoc(doc(db, 'users/alice'), {
+        displayName: 'Alice',
+        optInDisplayName: false,
+        optInDisplayAmount: false,
+      })
+    );
+    await assertSucceeds(
+      updateDoc(doc(alice(), 'users/alice'), { optInDisplayName: true })
     );
   });
 

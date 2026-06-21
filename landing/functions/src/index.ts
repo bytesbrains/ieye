@@ -9,5 +9,5 @@ import { setGlobalOptions } from "firebase-functions/v2";
 setGlobalOptions({ region: "asia-south1", maxInstances: 10 });
 
 export { grantAdmin, revokeAdmin } from "./adminClaims";
-export { onUserWritten, onContributionWritten } from "./publicSupporters";
+export { onUserWritten } from "./publicSupporters";
 export { onContributorRequestInvited } from "./invitations";

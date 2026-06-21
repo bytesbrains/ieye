@@ -1,9 +1,5 @@
 {
-  "//": "Test-only Firebase config used by `firebase emulators:exec` for the rules unit tests. Points at the real rules one directory up so tests always exercise the shipping firestore.rules. Hosting is intentionally omitted here.",
-  "firestore": {
-    "rules": "../firestore.rules",
-    "indexes": "../firestore.indexes.json"
-  },
+  "//": "Test-only Firebase config for `firebase emulators:exec` (the rules unit tests). Only the emulator wiring lives here — NO `firestore.rules` path, because rules.test.js loads ../firestore.rules itself (readFileSync -> initializeTestEnvironment), so the suite always exercises the shipping rules. Keeping a `firestore.rules: ../...` here would (a) be redundant and (b) be rejected by firebase-tools as 'outside the project directory'. Hosting is intentionally omitted.",
   "emulators": {
     "firestore": { "port": 8080 },
     "auth": { "port": 9099 },
