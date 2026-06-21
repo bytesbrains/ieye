@@ -80,3 +80,27 @@ extension consumes (`{ to, message: { subject, html } }`). Until that extension 
 an equivalent SMTP wire-up) is installed, invites simply **queue** — nothing is sent,
 nothing breaks. Install the extension and point it at `mail` to start sending. SMTP
 credentials live in the extension config (a secret manager), never in this code.
+
+### Sender identity & deliverability (do this when enabling sending)
+
+The `mail` documents carry only `to` + `message`; the **From / Reply-To is set in
+the extension config**, not in code. Use:
+
+- **From:** `noreply@ieye.in` (transactional sender — waitlist "it's open"
+  notifications and contributor invitations).
+- **Reply-To:** `support@ieye.in` (a monitored human mailbox — never bounce a
+  reply into a black hole).
+
+**Authenticate the domain or it lands in spam.** Before the first real send, add
+these DNS records for `ieye.in` (values from your email provider / Google
+Workspace / the extension's SMTP provider):
+
+- **SPF** — TXT record authorizing the sending provider.
+- **DKIM** — the provider's signing key (CNAME/TXT).
+- **DMARC** — a `_dmarc.ieye.in` policy (start `p=none` with `rua=mailto:dmarc@ieye.in`
+  to monitor, then tighten to `quarantine`/`reject`).
+
+> The welfare app's escalation emails (Easy mode, #20 — gated) are a **separate,
+> higher-stakes sender** and must not reuse the `noreply@` transactional identity:
+> a missed escalation is the failure mode that matters, so it needs its own
+> monitored, maximally-deliverable path.

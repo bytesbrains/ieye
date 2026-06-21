@@ -1,5 +1,6 @@
 import { Wordmark } from "./Brand";
 import { HonestyLine } from "./HonestyLine";
+import { LEGAL } from "../lib/legalCopy";
 
 export function Footer() {
   return (
@@ -48,10 +49,13 @@ export function Footer() {
 
           <div className="mt-8 max-w-prose space-y-3">
             <HonestyLine />
+            {/* Canonical contribution disclaimer — single source of truth (lib/legalCopy).
+                Was a near-duplicate paraphrase; reconciled per PR #50 so footer + CTA
+                render identical, Legal-approved wording. */}
+            <p className="text-sm text-charcoal-muted">{LEGAL.contributionDisclaimerShort}</p>
             <p className="text-sm text-charcoal-muted">
-              iEye is a free, open public good, built on the Maktub Protocol. It is received by
-              BytesBrains Pte Ltd (Singapore) — a company, not a charity. There is no iEye token and
-              no investment offer.
+              iEye is a free, open public good, built on the Maktub Protocol. There is no iEye token
+              and no investment offer.
             </p>
             <p className="text-sm text-charcoal-faint">
               &copy; {new Date().getFullYear()} iEye. A welfare app for people who live alone.
