@@ -4,6 +4,7 @@ import 'core/checker.dart';
 import 'core/circle.dart';
 import 'core/delivery_mode.dart';
 import 'core/detection_brain.dart';
+import 'core/rhythm.dart';
 import 'core/trigger_sink.dart';
 import 'features/arming/comprehension_gate_screen.dart';
 import 'features/checker/checker_invite_screen.dart';
@@ -30,9 +31,13 @@ class _IEyeAppState extends State<IEyeApp> {
   // delivery boundary is the no-op sink. The brain folds its (lack of) reach into
   // honest coverage, so the home tells the truth: it can watch, but can't yet
   // summon anyone — no fake green shield (#27).
+  // Per-person rhythm (#64): "watch the pattern, not the clock." It learns this
+  // person's normal quiet stretches on-device and falls back honestly to the fixed
+  // window until it has — so first-run behaviour is unchanged, then it tightens.
   late final DetectionBrain _brain = Tier0Brain(
     circle: _circle,
     sink: LocalNoopSink(),
+    rhythm: RhythmModel(),
   );
 
   @override

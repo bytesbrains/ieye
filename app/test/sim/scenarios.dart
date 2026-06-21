@@ -87,3 +87,49 @@ List<Scenario> tier0ScenarioLibrary() => [
     ),
   ),
 ];
+
+/// Frames of a person interacting on a regular cadence — the warm-up the rhythm
+/// model learns from. Each frame is a fresh interaction (silence clock reset).
+List<TraceFrame> regularInteractions({
+  required Duration every,
+  required Duration until,
+}) {
+  final frames = <TraceFrame>[];
+  for (var t = Duration.zero; t <= until; t += every) {
+    frames.add(TraceFrame(at: t));
+  }
+  return frames;
+}
+
+/// Two contrasting people that expose the fixed-window flaw (#64). A SINGLE global
+/// window cannot serve both: tight enough to catch the regular-rhythm collapse
+/// fast, it cries wolf on the loose-rhythm person's ordinary life. A per-person
+/// learned window gives each their own — the measurable win.
+
+/// A tight-rhythm person (interacts ~every 2.5h) who then collapses. A learned
+/// window should catch this in hours; the fixed 14h would wait far too long.
+Scenario regularRhythmThenCollapse() => Scenario(
+  name: 'regular-rhythm user collapses (per-person should catch fast)',
+  duration: const Duration(hours: 28),
+  frames: regularInteractions(
+    every: const Duration(hours: 2, minutes: 30),
+    until: const Duration(hours: 20), // last sign of life at 20h, then silence
+  ),
+  expect: const Expect.alarm(
+    triggerAt: Duration(hours: 20),
+    within: Duration(hours: 6), // the sensitivity target both policies must meet
+  ),
+);
+
+/// A loose-rhythm person whose ordinary life has 6h gaps — must NOT alarm. A tight
+/// global window (set to catch the regular person fast) false-alarms here; the
+/// learned per-person window does not.
+Scenario looseRhythmNormalLife() => Scenario(
+  name: 'loose-rhythm user, ordinary life (6h gaps)',
+  duration: const Duration(hours: 40),
+  frames: regularInteractions(
+    every: const Duration(hours: 6),
+    until: const Duration(hours: 40),
+  ),
+  expect: const Expect.quiet(),
+);
