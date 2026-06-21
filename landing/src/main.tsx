@@ -16,6 +16,12 @@ const WallPreview = lazy(() =>
   import("./pages/WallPreview").then((m) => ({ default: m.WallPreview }))
 );
 
+// Published legal pages — own chunks, no Firebase.
+const Privacy = lazy(() =>
+  import("./pages/Privacy").then((m) => ({ default: m.Privacy }))
+);
+const Terms = lazy(() => import("./pages/Terms").then((m) => ({ default: m.Terms })));
+
 function Lazy({ children }: { children: React.ReactNode }) {
   return (
     <Suspense
@@ -43,6 +49,23 @@ const router = createBrowserRouter([
     element: (
       <Lazy>
         <WallPreview />
+      </Lazy>
+    ),
+  },
+  // Published legal pages — lazy, no Firebase.
+  {
+    path: "/privacy",
+    element: (
+      <Lazy>
+        <Privacy />
+      </Lazy>
+    ),
+  },
+  {
+    path: "/terms",
+    element: (
+      <Lazy>
+        <Terms />
       </Lazy>
     ),
   },

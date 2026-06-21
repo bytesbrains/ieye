@@ -13,3 +13,10 @@
 /landing/src/components/Contribute.tsx       @nandal
 /landing/src/components/Footer.tsx           @nandal
 /landing/src/components/HonestyLine.tsx      @nandal
+
+# Published legal pages + their canonical wording / version — Legal review.
+/landing/src/pages/Privacy.tsx               @nandal
+/landing/src/pages/Terms.tsx                 @nandal
+/landing/src/components/legal/               @nandal
+/landing/src/lib/legalCopy.ts                @nandal
+/landing/src/lib/consentVersion.ts           @nandal

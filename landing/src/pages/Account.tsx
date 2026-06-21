@@ -8,6 +8,7 @@
 // claim (not read here); opt-in toggles live on the user's own doc.
 
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AppLayout } from "../components/app/AppLayout";
 import { OptInToggle } from "../components/app/OptInToggle";
 import { Spinner } from "../components/app/Spinner";
@@ -142,8 +143,11 @@ export function Account() {
           />
         </div>
         <p className="mt-4 text-sm text-charcoal-muted">
-          Consent recorded against notice version{" "}
-          <code className="text-charcoal-soft">{CONSENT_VERSION}</code>.
+          Consent recorded against{" "}
+          <Link to="/privacy" className="underline hover:text-charcoal">
+            privacy notice
+          </Link>{" "}
+          version <code className="text-charcoal-soft">{CONSENT_VERSION}</code>.
         </p>
       </Card>
 

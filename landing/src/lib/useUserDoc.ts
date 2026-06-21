@@ -12,8 +12,12 @@ import { db } from "./firebase";
 import type { UserDoc } from "./types";
 import { useAuth } from "../auth/AuthProvider";
 
-// Bump when the privacy notice changes; recorded with consent for lawful basis.
-export const CONSENT_VERSION = "2026-06-phase1.5";
+// Single source of truth for the notice version lives in a Firebase-free module
+// (so the public /privacy page can use it without pulling in Firebase). Import for
+// local use and re-export so existing `import { CONSENT_VERSION } from
+// "./useUserDoc"` keeps working.
+import { CONSENT_VERSION } from "./consentVersion";
+export { CONSENT_VERSION };
 
 export function useUserDoc() {
   const { user } = useAuth();

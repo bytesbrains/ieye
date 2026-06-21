@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Wordmark } from "./Brand";
 import { HonestyLine } from "./HonestyLine";
 import { LEGAL } from "../lib/legalCopy";
@@ -44,6 +45,12 @@ export function Footer() {
               <a href="#transparency" className="text-charcoal-soft hover:text-charcoal">
                 Transparency
               </a>
+              <Link to="/privacy" className="text-charcoal-soft hover:text-charcoal">
+                Privacy
+              </Link>
+              <Link to="/terms" className="text-charcoal-soft hover:text-charcoal">
+                Terms
+              </Link>
             </nav>
           </div>
 

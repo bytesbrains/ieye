@@ -13,6 +13,7 @@
 // the heavy completion path only loads when we're actually coming back signed in.
 
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { hasPendingWaitlist } from "../lib/waitlistPending";
 
 type Status = "idle" | "redirecting" | "finishing" | "done" | "error";
@@ -113,7 +114,11 @@ export function WaitlistCta() {
       )}
       <p className="mt-4 text-sm text-charcoal-muted">
         We use your Google name and email only to tell you when iEye opens — nothing else, no spam.
-        Your address stays private.
+        Your address stays private. See our{" "}
+        <Link to="/privacy" className="underline hover:text-charcoal">
+          Privacy Notice
+        </Link>
+        .
       </p>
     </div>
   );
