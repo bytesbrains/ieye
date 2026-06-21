@@ -329,6 +329,38 @@ describe('contributorRequests', () => {
       updateDoc(doc(admin(), 'contributorRequests/r1'), { status: 'vetted' })
     );
   });
+
+  test('admin CANNOT regress a request status (forward-only is structural)', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'contributorRequests/r1'), { ownerUid: 'alice', status: 'invited' })
+    );
+    await assertFails(
+      updateDoc(doc(admin(), 'contributorRequests/r1'), { status: 'vetted' })
+    );
+  });
+
+  test('admin CANNOT reassign a request to another owner', async () => {
+    await seed((db) =>
+      setDoc(doc(db, 'contributorRequests/r1'), { ownerUid: 'alice', status: 'requested' })
+    );
+    await assertFails(
+      updateDoc(doc(admin(), 'contributorRequests/r1'), { ownerUid: 'bob', status: 'vetted' })
+    );
+  });
+});
+
+// ===========================================================================
+// backend-only collections — held shut by default-deny (Admin SDK writes only)
+// ===========================================================================
+describe('backend-only collections', () => {
+  for (const path of ['consentLog/x', 'supporterIndex/alice', 'adminAudit/x', 'mail/x']) {
+    test(`clients cannot read or write ${path}`, async () => {
+      await seed((db) => setDoc(doc(db, path), { seeded: true }));
+      await assertFails(getDoc(doc(admin(), path)));
+      await assertFails(setDoc(doc(admin(), path), { x: 1 }));
+      await assertFails(setDoc(doc(alice(), path), { x: 1 }));
+    });
+  }
 });
 
 // ===========================================================================

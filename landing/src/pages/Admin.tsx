@@ -25,6 +25,8 @@ import type {
   WithId,
 } from "../lib/types";
 import { formatAmount } from "../lib/format";
+import { adminActionError, callGrantAdmin, callRevokeAdmin } from "../lib/adminActions";
+import { useAuth } from "../auth/AuthProvider";
 
 function BackendNote({ children }: { children: React.ReactNode }) {
   return (
@@ -53,10 +55,106 @@ export function Admin() {
         backend, never from this browser.
       </p>
 
+      <ManageAdmins />
       <RequestsQueue />
       <ContributionsLedger />
       <UsersList />
     </AppLayout>
+  );
+}
+
+function ManageAdmins() {
+  const { user } = useAuth();
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState<"grant" | "revoke" | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run(action: "grant" | "revoke") {
+    const target = email.trim();
+    if (!target) {
+      setError("Enter the person’s email address.");
+      return;
+    }
+    setBusy(action);
+    setMessage(null);
+    setError(null);
+    try {
+      const fn = action === "grant" ? callGrantAdmin : callRevokeAdmin;
+      const res = await fn({ email: target });
+      const verb = action === "grant" ? "Granted" : "Revoked";
+      setMessage(`${verb} admin for ${res.email ?? target}. ${res.note ?? ""}`.trim());
+      setEmail("");
+    } catch (err) {
+      setError(adminActionError(err));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const revokingSelf = email.trim() !== "" && email.trim().toLowerCase() === user?.email?.toLowerCase();
+
+  return (
+    <Card title="Manage admins">
+      <p className="max-w-prose text-base text-charcoal-soft">
+        Grant or revoke the <code>admin</code> claim by email. The person must have signed in at
+        least once. Changes take effect after their token refreshes — they should sign out and back
+        in to see the change.
+      </p>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+        <input
+          type="email"
+          inputMode="email"
+          autoComplete="off"
+          placeholder="person@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="field-input sm:max-w-sm"
+          aria-label="Email of the user to grant or revoke admin"
+        />
+        <div className="flex gap-3">
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => run("grant")}
+            className="btn btn-primary px-5 py-2 text-sm disabled:opacity-60"
+          >
+            {busy === "grant" ? "Granting…" : "Grant admin"}
+          </button>
+          <button
+            type="button"
+            disabled={busy !== null}
+            onClick={() => run("revoke")}
+            className="btn btn-secondary px-5 py-2 text-sm disabled:opacity-60"
+          >
+            {busy === "revoke" ? "Revoking…" : "Revoke admin"}
+          </button>
+        </div>
+      </div>
+
+      {revokingSelf && (
+        <p className="mt-3 text-sm text-amber-deep">
+          Heads up: that’s your own account — revoking it will remove your access on your next token
+          refresh.
+        </p>
+      )}
+      {message && (
+        <p role="status" className="mt-3 text-sm text-teal-deep">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="field-error mt-3">
+          {error}
+        </p>
+      )}
+
+      <BackendNote>
+        Minting and revoking the claim runs in a secured, admin-only Cloud Function
+        (<code>grantAdmin</code> / <code>revokeAdmin</code>) — never from a client write — and every
+        change is recorded to an append-only audit trail.
+      </BackendNote>
+    </Card>
   );
 }
 
