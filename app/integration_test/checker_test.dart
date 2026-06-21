@@ -43,8 +43,9 @@ void main() {
       expect(lastCheckerConsent!.eligibleForPhysicalCheck, isTrue);
     });
 
-    testWidgets('can step back to re-read the invite before committing',
-        (tester) async {
+    testWidgets('can step back to re-read the invite before committing', (
+      tester,
+    ) async {
       await pumpCheckerInvite(tester);
       await tester.tap(acceptInvite);
       await tester.pumpAndSettle();
