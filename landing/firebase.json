@@ -1,7 +1,8 @@
 {
+  "//": "hosting.ignore deliberately omits '**/.*': that glob matches the .well-known dir and would silently drop /.well-known/security.txt from the deploy (the SPA rewrite would then serve index.html as a 200 — a silent failure). 'dist' is clean Vite build output with no stray dotfiles, so the blanket dotfile ignore guards nothing. (PR #52 review.)",
   "hosting": {
     "public": "dist",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": ["firebase.json", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",

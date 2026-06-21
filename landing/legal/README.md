@@ -79,12 +79,12 @@ multisig signer role** in **Schedule FA** of the ITR — omission triggers the
 4. **FSMA Part 9 DTSP** (cross-border token services) — clear alongside MAS/PSA.
 
 ### 🔴 Launch-blocking operational items (not a sign-off, but must be real before publish)
-- [ ] **Live, monitored privacy contact** — the notice lists `privacy@ieye.in` for
-      rights requests; it must be a real, monitored mailbox before publish (a dead
-      contact is itself a compliance defect).
+- [x] **Live, monitored privacy contact** — `privacy@ieye.in` provisioned on the
+      ieye.in domain and set as the notice contact. *Keep it monitored* (a dead
+      rights-request contact is itself a compliance defect).
       → [`privacy-notice.md`](./privacy-notice.md) §1
-- [ ] **Footer wording reconciled** to the canonical disclaimer (or footer line
-      approved as a documented variant) as part of the Phase-2 wiring task.
+- [x] **Footer wording reconciled** — footer + money CTA now render the canonical
+      short form from `landing/src/lib/legalCopy.ts` (the single source of truth).
       → [`contribution-disclaimer.md`](./contribution-disclaimer.md)
 
 ### Can follow (not blocking the first contribution)
@@ -104,10 +104,11 @@ multisig signer role** in **Schedule FA** of the ITR — omission triggers the
    sign-offs. Resolve the EU/UK rep decision.
 2. **Counsel/CA:** review the drafted artifacts; the `[CONFIRM-*]` tags inside each
    mark exactly where your written sign-off is required.
-3. **Frontend (Phase 2):** wire the canonical wording from
-   [`contribution-disclaimer.md`](./contribution-disclaimer.md) and
-   [`on-chain-consent.md`](./on-chain-consent.md) as a single source of truth so
-   the live contribution UI cannot drift from approved wording.
+3. **Frontend:** the canonical strings are wired as a single source of truth in
+   **`landing/src/lib/legalCopy.ts`** (`LEGAL.*`), consumed today by the footer +
+   money CTA (short form). Phase-2 payment UI must consume `contributionDisclaimerFull`
+   at the point of payment and `onChainConsent` at the crypto send point — both
+   already exported there. Never paraphrase in a component; render `LEGAL.*`.
 
 *Nothing in this folder is final legal advice. It is in-house work product to
 brief — and be signed off by — licensed Singapore corporate/tax counsel, a

@@ -28,9 +28,10 @@ iEye is operated by **BytesBrains Pte Ltd**, a private limited company registere
 in Singapore ("BytesBrains," "we," "us"). For the personal data described in this
 notice, **BytesBrains Pte Ltd is the data controller**.
 
-Contact: _[privacy@ieye.in — **LAUNCH-BLOCKING: confirm this mailbox is live and
-monitored before publish.** A privacy notice that lists a dead contact for rights
-requests is itself a compliance defect.]_.
+Contact: **privacy@ieye.in** — the monitored mailbox for data-protection rights
+requests (access, correction, withdrawal, erasure). _(Mailbox provisioned on the
+ieye.in domain; it must remain actively monitored — a dead rights-request contact
+is itself a compliance defect.)_
 EU representative (GDPR Art. 27): _[PENDING — appoint or document non-targeting]_.
 UK representative (UK GDPR Art. 27): _[PENDING — appoint or document non-targeting]_.
 

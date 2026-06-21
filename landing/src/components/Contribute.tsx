@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Section } from "./Section";
 import { WaitlistCta } from "./WaitlistCta";
+import { LEGAL } from "../lib/legalCopy";
 
 export function Contribute() {
   return (
@@ -76,10 +77,9 @@ export function Contribute() {
             the most valuable thing you can give is your skills or a heads-up that you&rsquo;re
             interested.
           </p>
+          {/* Canonical contribution disclaimer — single source of truth (lib/legalCopy). */}
           <p className="mx-auto mt-4 max-w-prose text-sm text-charcoal-muted">
-            iEye is received by BytesBrains Pte Ltd (Singapore), a company, not a charity —
-            contributions support the project and are <strong>not</strong> tax-deductible. We say so
-            because honesty is the whole point.
+            {LEGAL.contributionDisclaimerShort}
           </p>
         </div>
       </div>

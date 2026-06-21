@@ -69,17 +69,14 @@ one tap away (footer/ToS):
 
 ## Implementation notes (for Frontend)
 
-- **Current state (Phase 1):** the canonical short form already renders under the
-  "coming soon" money block (`Contribute.tsx`). The **footer** carries a *related
-  but non-canonical* line ("…a company, not a charity. There is no iEye token…")
-  plus the shared `HonestyLine` — it does **not** yet use the exact short form
-  above. **To reconcile in the Phase-2 wiring task** (below): either render the
-  canonical short form in the footer or make the footer's line a documented,
-  Legal-approved variant. Until then, treat this file as the source of truth for
-  *contribution points*, and the footer line as a known to-reconcile item rather
-  than already-conformant.
-- When live money ships, the **full disclaimer** must render at the point of
-  payment (fiat and crypto) before the contributor confirms.
-- **Wiring task:** keep the canonical strings in one module so UI cannot drift
-  from this file, then point the money CTAs and footer at it.
+- **Single source of truth:** the canonical strings live in
+  **`landing/src/lib/legalCopy.ts`** (`LEGAL.contributionDisclaimerShort` /
+  `LEGAL.contributionDisclaimerFull`). The "coming soon" money block
+  (`Contribute.tsx`) and the **footer** (`Footer.tsx`) both render
+  `contributionDisclaimerShort` from there — **footer drift reconciled** (PR #50
+  follow-up). Change wording **here and in `legalCopy.ts` together**; CODEOWNERS
+  routes both past Legal.
+- When live money ships, the **full disclaimer** (`contributionDisclaimerFull`)
+  must render at the point of payment (fiat and crypto) before the contributor
+  confirms.
 - Route every new CTA past Legal review so "donate" never slips into a button.
