@@ -75,6 +75,22 @@ service cloud.firestore {
       return !incoming().keys().hasAny(['admin', 'role', 'roles', 'isAdmin', 'claims', 'customClaims']);
     }
 
+    // The amount opt-in was removed (#36, "named ≠ priced"): the wall is
+    // name-only and the projection is structurally incapable of carrying an
+    // amount. Enforce that structurally at the write boundary too — a client may
+    // NOT (re)introduce or change `optInDisplayAmount`, so the dead field can
+    // never come back as a live signal. We deliberately ALLOW an unchanged
+    // carry-through of a legacy copy on already-deployed docs (incoming ==
+    // existing) so a name/consent edit isn't bricked by inert old data; those
+    // copies are inert (nothing reads them) and are swept by the one-time
+    // cleanup script (functions/scripts/purge-legacy-amount.mjs).
+    function noLegacyAmountOptIn() {
+      return !incoming().keys().hasAny(['optInDisplayAmount'])
+        || (resource != null
+            && existing().keys().hasAny(['optInDisplayAmount'])
+            && incoming().optInDisplayAmount == existing().optInDisplayAmount);
+    }
+
     // Ordinal of a contributorRequest status, for forward-only transitions.
     function statusRank(s) {
       return s == 'invited' ? 2 : (s == 'vetted' ? 1 : 0);
@@ -87,13 +103,15 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if isOwner(uid) || isAdmin();
 
-      // Create: only the owner, only their own doc, no privilege fields.
-      allow create: if isOwner(uid) && hasNoPrivilegeEscalation();
+      // Create: only the owner, only their own doc, no privilege fields, and no
+      // resurrected `optInDisplayAmount` (the wall is name-only; #36).
+      allow create: if isOwner(uid) && hasNoPrivilegeEscalation() && noLegacyAmountOptIn();
 
       // Update: owner may edit their own profile / opt-in-named / consent,
-      // but may NOT introduce authz fields and may NOT change the doc's
-      // identity (uid is the doc id — there is no mutable owner field here).
-      allow update: if isOwner(uid) && hasNoPrivilegeEscalation();
+      // but may NOT introduce authz fields, may NOT (re)introduce or change the
+      // removed amount opt-in, and may NOT change the doc's identity (uid is the
+      // doc id — there is no mutable owner field here).
+      allow update: if isOwner(uid) && hasNoPrivilegeEscalation() && noLegacyAmountOptIn();
 
       // Owner may delete their own profile (right-to-erasure self-service);
       // admin may delete (account closure). Backend handles cascade cleanup.
@@ -119,9 +137,9 @@ service cloud.firestore {
     }
 
     // ---- publicSupporters ----------------------------------------------
-    // Backend-populated PROJECTION containing ONLY consented, public fields
-    // (e.g. display name and/or amount the contributor opted in to show).
-    // World-readable BY DESIGN — it holds nothing private, so rules never
+    // Backend-populated PROJECTION containing ONLY the consented display name
+    // (name-only by design — the wall never carries an amount; #36 "named ≠
+    // priced"). World-readable BY DESIGN — it holds nothing private, so rules never
     // have to crack open a private `users`/`contributions` doc to render the
     // public wall. Writable ONLY by backend/admin (which build it from the
     // consent state + logged consent in #38 §4). A client cannot inject

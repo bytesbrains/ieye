@@ -13,7 +13,6 @@ import { db } from "./firebaseAdmin";
 
 export interface ConsentState {
   optInDisplayName: boolean;
-  optInDisplayAmount: boolean;
   consentVersion: string | null;
 }
 
@@ -21,7 +20,6 @@ export interface ConsentState {
 export function readConsentState(data: Record<string, unknown> | undefined): ConsentState {
   return {
     optInDisplayName: data?.optInDisplayName === true,
-    optInDisplayAmount: data?.optInDisplayAmount === true,
     consentVersion: typeof data?.consentVersion === "string" ? data.consentVersion : null,
   };
 }
@@ -29,22 +27,20 @@ export function readConsentState(data: Record<string, unknown> | undefined): Con
 export function consentChanged(a: ConsentState, b: ConsentState): boolean {
   return (
     a.optInDisplayName !== b.optInDisplayName ||
-    a.optInDisplayAmount !== b.optInDisplayAmount ||
     a.consentVersion !== b.consentVersion
   );
 }
 
 /**
  * Append a server-timestamped consent record. `action` distinguishes a genuine
- * grant/extension (something is now opted in) from a withdrawal (all flags off).
+ * grant (the name is now opted in) from a withdrawal (opted back out).
+ * The wall is name-only (#36 "named ≠ priced") — there is no amount to consent to.
  */
 export async function recordConsent(uid: string, state: ConsentState): Promise<void> {
-  const granting = state.optInDisplayName || state.optInDisplayAmount;
   await db.collection("consentLog").add({
     uid,
-    action: granting ? "consent" : "withdraw",
+    action: state.optInDisplayName ? "consent" : "withdraw",
     optInDisplayName: state.optInDisplayName,
-    optInDisplayAmount: state.optInDisplayAmount,
     consentVersion: state.consentVersion,
     recordedAt: FieldValue.serverTimestamp(),
   });

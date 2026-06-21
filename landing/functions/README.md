@@ -13,8 +13,7 @@ later, Legal-gated phase (#39).
 |---|---|---|
 | `grantAdmin` | callable | Mint the `admin` custom claim. **Admin-only** (caller's own token claim is checked). Audited. |
 | `revokeAdmin` | callable | Remove the `admin` claim. Admin-only. Audited. **Refuses to remove the last admin** (no lockout). |
-| `onUserWritten` | Firestore trigger | Records a consent change to the append-only `consentLog`, then rebuilds the user's `publicSupporters` entry from their consent (opt-in name / amount). Opting out or deleting the account removes the entry — **withdrawal is honored**. |
-| `onContributionWritten` | Firestore trigger | Re-projects a supporter when their contributions change (amount may move). |
+| `onUserWritten` | Firestore trigger | Records a consent change to the append-only `consentLog`, then rebuilds the user's `publicSupporters` entry from their consent (opt-in **name only** — the wall never carries an amount, #36). Opting out or deleting the account removes the entry — **withdrawal is honored**. |
 | `onContributorRequestInvited` | Firestore trigger | On a request advancing to `invited`, stamps `invitedAt` and enqueues an invitation email. |
 
 ### Authorization model
@@ -24,9 +23,11 @@ later, Legal-gated phase (#39).
 - The `publicSupporters` projection contains **only consented fields** and is the
   only thing the public wall reads (no private doc is ever exposed by rules). It is
   keyed by a **random id, never the uid**, and carries no uid field, so listing the
-  world-readable wall reveals nothing about *who* its supporters are (an amount-only
-  opt-in stays anonymous). The private `supporterIndex` (uid → public id) lets the
-  backend still find and rebuild/remove a user's entry.
+  world-readable wall reveals nothing about *who* its supporters are. It is
+  **name-only — no amount field exists** ("named ≠ priced", #36), so the wall is
+  structurally incapable of publishing a per-person figure. The private
+  `supporterIndex` (uid → public id) lets the backend still find and
+  rebuild/remove a user's entry.
 - `adminAudit` (grant/revoke trail), `consentLog` (tamper-evident consent record),
   `supporterIndex`, and `mail` (outbox) are written only by the Admin SDK; no client
   allow-rule matches them, so default-deny blocks all clients.
@@ -54,6 +55,22 @@ firebase deploy --only functions --project ieye-in
 
 Requires the **Blaze** plan and these APIs (auto-enabled on first deploy): Cloud
 Functions, Cloud Run, Eventarc, Pub/Sub, Cloud Build, Artifact Registry, Compute.
+
+## One-time maintenance — purge legacy amount fields (#36)
+
+Docs written *before* the name-only switch may still carry inert `optInDisplayAmount`
+(on `users`) or `displayAmount` (on `publicSupporters`) copies. Nothing reads them and
+rules now refuse to add or change `optInDisplayAmount`, so they're harmless — but
+`scripts/purge-legacy-amount.mjs` sweeps them so the "an amount can never be published"
+guarantee holds for pre-existing docs too. Idempotent and dry-run by default:
+
+```bash
+# from landing/functions, with Admin credentials for the live project
+GOOGLE_APPLICATION_CREDENTIALS=/path/sa.json GOOGLE_CLOUD_PROJECT=ieye-in \
+  node scripts/purge-legacy-amount.mjs           # dry run — reports counts
+GOOGLE_APPLICATION_CREDENTIALS=/path/sa.json GOOGLE_CLOUD_PROJECT=ieye-in \
+  node scripts/purge-legacy-amount.mjs --apply   # delete the dead fields
+```
 
 ## Enable email sending (optional, when ready)
 

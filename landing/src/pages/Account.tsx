@@ -58,7 +58,6 @@ export function Account() {
           email: user.email ?? "",
           photoURL: user.photoURL ?? "",
           optInDisplayName: false,
-          optInDisplayAmount: false,
         },
         { recordConsent: true }
       );
@@ -124,31 +123,19 @@ export function Account() {
           blockchain is permanent and can&rsquo;t be un-published from the chain itself. We&rsquo;ll
           warn you clearly before any on-chain contribution.
         </div>
-        <div className="mt-4 divide-y divide-charcoal/10">
+        {/* Name only — the wall never shows amounts (#36, "named ≠ priced"),
+            so there is deliberately no amount toggle to offer. */}
+        <div className="mt-4">
           <OptInToggle
             id="optInDisplayName"
             label="Request to show my name"
-            description="Ask us to display your name on the public supporter wall."
+            description="Ask us to display your name on the public supporter wall. Everyone named is thanked equally — amounts are never shown."
             checked={profile?.optInDisplayName === true}
             disabled={profileLoading}
             onChange={async (next) => {
               await upsertUserProfile(
                 user.uid,
                 { optInDisplayName: next },
-                { recordConsent: true }
-              );
-            }}
-          />
-          <OptInToggle
-            id="optInDisplayAmount"
-            label="Request to show my contribution amount"
-            description="Ask us to display the amount alongside your entry. Separate from your name."
-            checked={profile?.optInDisplayAmount === true}
-            disabled={profileLoading}
-            onChange={async (next) => {
-              await upsertUserProfile(
-                user.uid,
-                { optInDisplayAmount: next },
                 { recordConsent: true }
               );
             }}

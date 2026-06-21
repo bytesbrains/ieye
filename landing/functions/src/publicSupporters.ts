@@ -4,22 +4,25 @@
 // wall reads (rules never crack open a private users/contributions doc). It is
 // writable ONLY here. The contract (THREAT-MODEL §4):
 //
-//   - A supporter appears ONLY with the fields they opted into:
-//       optInDisplayName  -> displayName
-//       optInDisplayAmount -> displayAmount (summed from their money contributions)
-//   - Opting out (either flag) or deleting the account REMOVES the entry —
-//     withdrawal is honored on the next write, automatically.
-//   - Amounts are derived from the contributions ledger (backend source of
-//     truth); the client never supplies them.
+//   - A supporter appears ONLY if they opted in:  optInDisplayName -> displayName
+//   - Opting out or deleting the account REMOVES the entry — withdrawal is
+//     honored on the next write, automatically.
+//
+// NAME-ONLY, NO AMOUNT (#36, wall Version B "Flat Wall"): opt-in to be named is
+// NOT opt-in to be priced. The projection is structurally incapable of carrying
+// a per-person amount — there is no amount field and no contribution read here,
+// so an exact figure cannot leak even by mistake. The wall reads only the user
+// doc. (A future contribution-derived signal — e.g. a money/in-kind/labor tag —
+// would reintroduce a contribution trigger; deliberately out of scope until the
+// live wall is built.)
 //
 // NON-CORRELATABLE BY DESIGN (THREAT-MODEL §6): the public doc is keyed by a
 // random id, NOT the user's uid, and carries NO uid field — so listing the
-// world-readable wall never discloses who its supporters are, and an
-// amount-only opt-in stays genuinely anonymous. The private `supporterIndex`
-// (uid -> public id) lives in a default-denied collection so we can still find
-// and rebuild/remove a user's entry. We REPLACE the public doc on every rebuild
-// (set without merge) so it reflects exactly the current consent — never a
-// stale leftover field.
+// world-readable wall never discloses the private uid behind an entry. The
+// private `supporterIndex` (uid -> public id) lives in a default-denied
+// collection so we can still find and rebuild/remove a user's entry. We REPLACE
+// the public doc on every rebuild (set without merge) so it reflects exactly the
+// current consent — never a stale leftover field.
 
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { FieldValue } from "firebase-admin/firestore";
@@ -32,57 +35,26 @@ import { consentChanged, readConsentState, recordConsent } from "./consent";
 // limit (withdrawal latency is a privacy concern, not just throughput).
 const PROJECTION_MAX_INSTANCES = 20;
 
-/** Sum a supporter's money contributions, wei-native. Returns null if none. */
-async function computePublicAmountWei(uid: string): Promise<string | null> {
-  const snap = await db
-    .collection("contributions")
-    .where("ownerUid", "==", uid)
-    .where("kind", "==", "money")
-    .get();
-
-  let total = 0n;
-  for (const doc of snap.docs) {
-    const wei = doc.get("amountWei");
-    if (typeof wei === "string") {
-      try {
-        total += BigInt(wei);
-      } catch {
-        // Skip a malformed amount rather than poison the whole sum.
-      }
-    }
-  }
-  return total > 0n ? total.toString() : null;
-}
-
 /**
  * The public projection a user currently consents to, or null if they should
- * not be on the wall (no consent, nothing to show, or account gone).
+ * not be on the wall (not opted in, or account gone). Name-only by design —
+ * the wall never carries an amount (#36).
  */
 async function computeEntry(uid: string): Promise<Record<string, unknown> | null> {
   const userSnap = await db.collection("users").doc(uid).get();
   if (!userSnap.exists) return null; // account gone -> no wall entry
 
   const u = userSnap.data() ?? {};
-  const optName = u.optInDisplayName === true;
-  const optAmount = u.optInDisplayAmount === true;
-  if (!optName && !optAmount) return null; // no consent -> withdraw
+  if (u.optInDisplayName !== true) return null; // no consent -> withdraw
 
-  const entry: Record<string, unknown> = {};
-  if (optName) {
-    const name = typeof u.displayName === "string" ? u.displayName.trim() : "";
-    entry.displayName = name || "A supporter";
-  }
-  if (optAmount) {
-    const amount = await computePublicAmountWei(uid);
-    if (amount) entry.displayAmount = amount;
-  }
-
-  // Consented but nothing yet to show (e.g. amount-only opt-in, no contribution).
-  if (entry.displayName === undefined && entry.displayAmount === undefined) return null;
-
-  entry.consentVersion = u.consentVersion ?? null;
-  entry.publishedAt = FieldValue.serverTimestamp();
-  return entry; // NOTE: deliberately carries NO uid — the wall must stay non-correlatable.
+  const name = typeof u.displayName === "string" ? u.displayName.trim() : "";
+  return {
+    displayName: name || "A supporter",
+    consentVersion: u.consentVersion ?? null,
+    publishedAt: FieldValue.serverTimestamp(),
+    // NOTE: deliberately NO uid and NO amount — the wall stays non-correlatable
+    // and structurally priceless ("named ≠ priced").
+  };
 }
 
 /**
@@ -139,14 +111,8 @@ export const onUserWritten = onDocumentWritten(
   }
 );
 
-// A contribution changed -> reproject its owner (amount may have moved).
-export const onContributionWritten = onDocumentWritten(
-  { document: "contributions/{id}", maxInstances: PROJECTION_MAX_INSTANCES },
-  async (event) => {
-    const after = event.data?.after;
-    const before = event.data?.before;
-    const ownerUid =
-      (after?.exists ? after.get("ownerUid") : before?.get("ownerUid")) as string | undefined;
-    if (ownerUid) await rebuildSupporter(ownerUid);
-  }
-);
+// NOTE: there is deliberately NO contributions trigger. The wall is name-only,
+// derived solely from the users doc, so a contribution write can't change a
+// public entry — and the projection never reads the ledger. A contributions
+// trigger would return only if/when the live wall adds a contribution-derived
+// signal (e.g. a money/in-kind/labor tag), and even then never an amount (#36).

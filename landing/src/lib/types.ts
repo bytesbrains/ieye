@@ -15,8 +15,6 @@ export interface UserDoc {
   photoURL?: string;
   /** Opt-IN to show name on the public wall. Default false. (#36/#38 §4) */
   optInDisplayName?: boolean;
-  /** Opt-IN to show amount on the public wall. Default false. (#38 §4) */
-  optInDisplayAmount?: boolean;
   /** Which privacy-notice version the user consented to (#38 §4.5). */
   consentVersion?: string;
   consentAt?: Timestamp;
@@ -43,10 +41,16 @@ export interface ContributionDoc {
   reconciledAt?: Timestamp;
 }
 
-/** publicSupporters/{id} — world-readable projection of CONSENTED fields only. */
+/**
+ * publicSupporters/{id} — world-readable projection of CONSENTED fields only.
+ *
+ * Carries NO amount, by design (#36, wall Version B "Flat Wall"): opt-in to be
+ * named is NOT opt-in to be priced, so the projection is structurally incapable
+ * of publishing a per-person figure. Recognition is name-only; the gradient is
+ * recovered off the wall (org/partner strip + private receipts).
+ */
 export interface PublicSupporterDoc {
   displayName?: string;
-  displayAmount?: string;
   publishedAt?: Timestamp;
   featured?: boolean;
 }
