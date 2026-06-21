@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/coverage.dart';
 import '../../core/detection_brain.dart';
 import '../../theme/ieye_theme.dart';
+import '../../widgets/coverage_note_banner.dart';
 
 /// The honest-coverage home screen (PRD §6) — the one surface the watched person
 /// may see. It tells the TRUTH: last sign of life, battery, how many people are
@@ -39,7 +40,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   _CoverageFacts(c),
                   if (c.note != null) ...[
                     const SizedBox(height: 16),
-                    _HonestNote(c.note!),
+                    // A coverage gap is a warning (icon + lead + live region);
+                    // a planned "going dark" pause is calm.
+                    c.status == CoverageStatus.degraded
+                        ? CoverageNoteBanner(c.note!)
+                        : _HonestNote(c.note!),
                   ],
                   const SizedBox(height: 32),
                   _GoingDarkControls(

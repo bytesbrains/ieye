@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ieye/app.dart';
 import 'package:ieye/core/checker.dart';
+import 'package:ieye/core/circle.dart';
 import 'package:ieye/core/detection_brain.dart';
 import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
@@ -120,5 +121,71 @@ void main() {
         expect(callOnly.eligibleForPhysicalCheck, isFalse);
       },
     );
+  });
+
+  group('circle coverage (#18 — no silent gaps)', () {
+    test(
+      'the demo circle is safe (≥2 checkers, ≥1 within driving distance)',
+      () {
+        final c = Circle(demoCircleMembers());
+        expect(c.total, 3);
+        expect(c.canReachFastCount, 1);
+        expect(c.isSafe, isTrue);
+        expect(c.coverageNote, isNull);
+        // Ordered nearest-first.
+        expect(c.byProximity.map((m) => m.name).toList(), [
+          'Maria',
+          'Tom',
+          'Priya',
+        ]);
+      },
+    );
+
+    test('losing the only in-person checker surfaces an honest gap', () {
+      final store = CircleStore(demoCircleMembers());
+      store.resign('maria'); // the only canGoInPerson member
+      final c = store.circle;
+      expect(c.total, 2);
+      expect(c.canReachFastCount, 0);
+      expect(c.isSafe, isFalse);
+      expect(c.coverageNote, contains('no one close enough to come over'));
+    });
+
+    test('a lone checker is unsafe even if they can reach fast', () {
+      final c = Circle(const [
+        CircleMember(
+          id: 'solo',
+          name: 'Solo',
+          reach: CheckerReach.canGoInPerson,
+          proximity: Proximity.nearby,
+        ),
+      ]);
+      expect(c.isSafe, isFalse);
+      expect(c.coverageNote, contains('just one checker'));
+    });
+
+    test('an empty circle is never silent', () {
+      const c = Circle([]);
+      expect(c.isSafe, isFalse);
+      expect(c.coverageNote, contains('No one is watching'));
+    });
+
+    test('resignation can be undone (graceful exit)', () {
+      final store = CircleStore(demoCircleMembers());
+      store.resign('tom');
+      expect(store.circle.total, 2);
+      expect(store.canUndo, isTrue);
+      store.undoLastResign();
+      expect(store.circle.total, 3);
+      expect(store.canUndo, isFalse);
+    });
+
+    test('undo restores a member at its original position (no reordering)', () {
+      final store = CircleStore(demoCircleMembers()); // maria, tom, priya
+      store.resign('tom'); // the middle one
+      expect(store.circle.members.map((m) => m.id), ['maria', 'priya']);
+      store.undoLastResign();
+      expect(store.circle.members.map((m) => m.id), ['maria', 'tom', 'priya']);
+    });
   });
 }

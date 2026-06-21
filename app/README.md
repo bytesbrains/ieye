@@ -24,13 +24,19 @@ lib/
     detection_brain.dart    shared on-device brain interface (#11); Tier0StubBrain
     coverage.dart           honest coverage state (no fake "protected" boolean)
     checker.dart            checker consent state (#17) — active accept, no silent enrolment
+    circle.dart             the circle + coverage maths (#18); CircleStore (resign/undo)
   features/
     onboarding/             two-role entry: "for myself" / "for someone I care about"
     home/                   honest-coverage home + the "going dark" flow (PRD §3C)
     checker/                checker consent handshake — invite → accept → availability → rehearsal (#17)
+    circle/                 circle visibility + graceful step-down (#18)
 test/widget_test.dart       unit/guardrail tests
-integration_test/           on-device E2E: app_test.dart + checker_test.dart (+ finders.dart)
+integration_test/           on-device E2E: app_test, checker_test, circle_test (+ finders.dart)
 ```
+
+Coverage is read through one boundary — `DetectionBrain` composes it from sensing
+(stub) + the `CircleStore`, so a checker stepping down flows straight into the
+owner's honest-coverage home. No UI computes coverage ad hoc; a gap can't be hidden.
 
 ## Design constraints baked in (don't regress these)
 
@@ -60,7 +66,7 @@ Run the on-device E2E: `flutter test integration_test -d <device-id>`.
 
 ## Next slices
 
-- Circle visibility + graceful checker exit (#18) — surface coverage drops.
+- Comprehension gate before arming (#25); honest home for the configurer (#27).
 - Tier-0 phone-only sensing behind `DetectionBrain` (#14): GPS + IMU + battery +
   per-location rhythm.
 - Escalation ladder as lived experience (#21); auto-call (#22, Easy mode, gated).
