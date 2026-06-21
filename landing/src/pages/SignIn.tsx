@@ -48,6 +48,17 @@ export function SignIn() {
           We only read your name, email, and photo from Google to set up your profile. You can
           delete your account and data at any time.
         </p>
+        <p className="mt-3 text-center text-sm text-charcoal-muted">
+          By continuing you agree to our{" "}
+          <Link to="/terms" className="underline hover:text-charcoal">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link to="/privacy" className="underline hover:text-charcoal">
+            Privacy Notice
+          </Link>
+          .
+        </p>
 
         <div className="mt-8 text-center">
           <Link to="/" className="btn-ghost text-sm">

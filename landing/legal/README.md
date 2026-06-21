@@ -31,6 +31,14 @@ multisig signer role** in **Schedule FA** of the ITR — omission triggers the
 | [`privacy-notice.md`](./privacy-notice.md) | Privacy notice — BytesBrains as controller (PDPA/GDPR/DPDP) | ✅ drafted; EU/UK rep pending |
 | [`aml-sanctions-policy.md`](./aml-sanctions-policy.md) | AML/sanctions controls for the public crypto address | ✅ drafted; gated on MAS opinion |
 | [`contribution-constraints.md`](./contribution-constraints.md) | Benefit-free-contribution rule (protects tax + GST) | ✅ drafted; product constraint |
+| [`terms-of-service.md`](./terms-of-service.md) | Terms of Use companion to the published `/terms` page | ✅ drafted; binding clauses Legal-gated |
+
+> **Published pages (live to users):** the Privacy Notice renders at **`/privacy`**
+> (`src/pages/Privacy.tsx`) and the Terms at **`/terms`** (`src/pages/Terms.tsx`),
+> linked from the footer and at every consent point (waitlist, sign-in, account).
+> The `/privacy` version is pinned to `CONSENT_VERSION`, so recorded consent always
+> maps to a readable notice (closes the consent-integrity gap). The `.md` files
+> here are the counsel-review companions; keep them in sync with the pages.
 
 > **Self-audit the open external sign-offs** at any time:
 > `grep -rn '\[CONFIRM-' landing/legal/` — every hit is a spot a licensed
