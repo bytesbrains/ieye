@@ -22,8 +22,19 @@ export interface AuthState {
   isAdmin: boolean;
   /** True until the first auth state + claim resolution completes. */
   loading: boolean;
+  /**
+   * Firebase error code from a failed *redirect* sign-in (e.g.
+   * `auth/unauthorized-domain`), surfaced on return from Google. null when the
+   * last redirect succeeded or none has been attempted. The redirect unloads the
+   * page, so this is the ONLY channel a redirect-side failure can reach the UI —
+   * the click handler's catch never runs (its frame is gone). Cleared by
+   * `clearAuthError()` when the user retries.
+   */
+  authError: string | null;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  /** Clear a surfaced redirect error (call before re-attempting sign-in). */
+  clearAuthError: () => void;
   /** Force a token refresh (e.g. after an admin claim is minted backend-side). */
   refreshClaims: () => Promise<void>;
 }
@@ -41,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     // Finalize any pending redirect sign-in. We use signInWithRedirect (not
@@ -50,8 +62,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // A redirect is a top-level navigation, immune to that. getRedirectResult
     // completes the exchange on return and surfaces errors (e.g.
     // auth/unauthorized-domain) that would otherwise be swallowed.
-    getRedirectResult(auth).catch((e) => {
+    getRedirectResult(auth).catch((e: unknown) => {
+      const code = (e as { code?: string })?.code ?? "auth/internal-error";
+      // The redirect already unloaded the page that called signInWithGoogle, so
+      // its catch is gone — record the code in state so the UI can show it.
       console.error("[auth] redirect sign-in did not complete:", e);
+      setAuthError(code);
     });
 
     // onIdTokenChanged fires on sign-in, sign-out, AND token refresh — so a
@@ -70,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       isAdmin,
       loading,
+      authError,
       signInWithGoogle: async () => {
         // Navigates away to Google and back — the click handler's code after
         // this await does not run (the page unloads). Signed-in state is picked
@@ -79,13 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signOut: async () => {
         await fbSignOut(auth);
       },
+      clearAuthError: () => setAuthError(null),
       refreshClaims: async () => {
         if (!auth.currentUser) return;
         await auth.currentUser.getIdToken(true); // force refresh
         setIsAdmin(await readAdminClaim(auth.currentUser));
       },
     }),
-    [user, isAdmin, loading]
+    [user, isAdmin, loading, authError]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

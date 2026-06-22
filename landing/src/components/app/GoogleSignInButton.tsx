@@ -3,24 +3,51 @@
 import { useState } from "react";
 import { useAuth } from "../../auth/AuthProvider";
 
+// Map a Firebase auth error code to calm, honest copy. Covers both redirect-side
+// failures (surfaced via authError on return) and the rarer click-handler throws.
+// Default stays vague on purpose — we never invent a cause we can't confirm.
+function messageForCode(code: string): string {
+  switch (code) {
+    case "auth/popup-closed-by-user":
+    case "auth/cancelled-popup-request":
+    case "auth/user-cancelled":
+      return "Sign-in was cancelled. You can try again whenever you're ready.";
+    case "auth/unauthorized-domain":
+      // Config issue: this site's domain isn't on the project's authorized list.
+      // The user can't fix it, so say so plainly rather than imply "try again".
+      return "Sign-in isn't enabled for this site yet. This is on our end — please let us know, or try again from ieye-in.web.app.";
+    case "auth/operation-not-allowed":
+    case "auth/configuration-not-found":
+      return "Google sign-in isn't available right now. This is on our end — please try again later.";
+    case "auth/network-request-failed":
+      return "We couldn't reach Google. Check your connection and try again.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Please wait a moment and try again.";
+    default:
+      return "Sign-in didn't go through. Please try again in a moment.";
+  }
+}
+
 export function GoogleSignInButton({ onSignedIn }: { onSignedIn?: () => void }) {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, authError, clearAuthError } = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // A redirect-side failure (e.g. auth/unauthorized-domain) unloads the page
+  // before handleClick's catch can run, so it arrives via authError instead.
+  // Prefer a local throw if one just happened; otherwise show the redirect error.
+  const shownError = error ?? (authError ? messageForCode(authError) : null);
 
   async function handleClick() {
     setBusy(true);
     setError(null);
+    clearAuthError(); // a fresh attempt clears any stale redirect error
     try {
       await signInWithGoogle();
       onSignedIn?.();
     } catch (e) {
       const code = (e as { code?: string })?.code ?? "";
-      if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
-        setError("Sign-in was cancelled. You can try again whenever you're ready.");
-      } else {
-        setError("Sign-in didn't go through. Please try again in a moment.");
-      }
+      setError(messageForCode(code));
     } finally {
       setBusy(false);
     }
@@ -43,9 +70,9 @@ export function GoogleSignInButton({ onSignedIn }: { onSignedIn?: () => void }) 
         </svg>
         {busy ? "Signing in…" : "Continue with Google"}
       </button>
-      {error && (
+      {shownError && (
         <p role="alert" className="field-error mt-3 text-center">
-          {error}
+          {shownError}
         </p>
       )}
     </div>
