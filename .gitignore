@@ -24,7 +24,8 @@ build/
 **/ios/Pods/
 **/build/
 
-# Claude Code local (machine-specific; keep commands/ tracked)
-.claude/settings.local.json
-.claude/projects/
-.claude/*.lock
+# Claude Code — internal tooling / local state, never published
+.claude/
+
+# Scratch
+tmp/
