@@ -2,7 +2,7 @@ rules_version = '2';
 
 // iEye — Phase-1.5 web-app Firestore security rules.
 //
-// Author: Security, iEye (Maktub Protocol vertical).
+// Author: iEye Security.
 // Refs: web-app architecture #43, contribution model + opt-in-named decision #36,
 //       data-controller / legal posture #38.
 //

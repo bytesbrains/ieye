@@ -35,13 +35,3 @@ Either way, the people you chose are reached.
 ## Market
 
 **India-first go-to-market** (NRI families / aging parents living alone), launched **globally on all app stores**. Focus the wedge, not the availability.
-
-## The team
-
-The `.claude/commands/` team (Product, Security/`security`, Architect, Designer, Legal, Mobile, etc.) are the **same Maktub Protocol roles**, now also stewarding the iEye vertical. Their identities and philosophy are unchanged; apply their mandates to iEye as a Maktub vertical.
-
-## Status / open gates (from Product + Security review on #274)
-
-- ✅ **Green-lit to prototype now:** the on-device brain (sensor fusion + rhythm model + local escalation rungs 1–2) — *provided it signs nothing.*
-- 🚧 **Architect:** scoped session key that can ONLY call `checkIn(welfareBeatId)`, non-exportable in Secure Enclave/StrongBox (a bare hot EOA owning the welfare Beat is rejected). Unblocks Sovereign mode.
-- 🚧 **Security + Legal:** Easy mode is the push server Maktub D-041 gated — backend becomes a data controller of liveness/location/social-graph (health-adjacent, GDPR, robocall consent). Must clear that gate before Easy mode ships.

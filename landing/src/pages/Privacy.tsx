@@ -11,8 +11,8 @@ import { CONSENT_VERSION } from "../lib/consentVersion";
 //
 // Scoped to what we ACTUALLY collect today (Phase 1.5: waitlist + Google account
 // + the name-only supporter-wall opt-in). Contributions/crypto are described as
-// future because no payment surface is live yet. The fuller, internal draft
-// (incl. Phase-2 contribution/on-chain detail) lives in landing/legal/privacy-notice.md.
+// future because no payment surface is live yet. Fuller Phase-2
+// contribution/on-chain detail is pending legal sign-off before it goes live.
 //
 // IMPORTANT: this is the notice users consent to. `Version` is pinned to
 // CONSENT_VERSION (the value recorded with each consent) so logged consent always

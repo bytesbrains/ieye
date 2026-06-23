@@ -1,6 +1,6 @@
 # iEye Phase-1.5 web app — Firestore threat model & data model
 
-**Author:** Security, iEye (Maktub Protocol vertical)
+**Author:** iEye Security
 **Scope:** Firestore data model + security rules + admin RBAC for the auth'd web app (#43).
 **Refs:** web-app architecture #43 · contribution model + opt-in-named #36 · data-controller / legal posture #38.
 

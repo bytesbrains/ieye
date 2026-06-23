@@ -1,14 +1,9 @@
 // Canonical legal copy — SINGLE SOURCE OF TRUTH for contribution wording.
 //
-// These strings are the verbatim wording approved in landing/legal/ (DRAFT — FOR
-// COUNSEL REVIEW). The contribution UI and the footer MUST render these and never
-// paraphrase, so live copy can't drift from the approved text — exactly the drift
-// flagged in PR #50. If wording changes, change it HERE *and* in the matching
-// landing/legal/ doc together; CODEOWNERS routes both past Legal.
-//
-// Sources (keep in sync):
-//   contributionDisclaimerFull / Short -> landing/legal/contribution-disclaimer.md
-//   onChainConsent                     -> landing/legal/on-chain-consent.md
+// These strings are the counsel-approved wording. The contribution UI and the
+// footer MUST render these and never paraphrase, so live copy can't drift from
+// the approved text — exactly the drift flagged in PR #50. If wording changes,
+// change it HERE and route the change past Legal (CODEOWNERS).
 //
 // Note: emphasis/bolding is intentionally NOT encoded here — the legally load-
 // bearing thing is the exact WORDS, not the styling. Render as plain text so a
@@ -42,7 +37,7 @@ export const LEGAL = {
   /**
    * On-chain consent — must render verbatim at the crypto send point, BEFORE the
    * address/QR is shown, behind an affirmative action. (Phase 2 / crypto channel,
-   * still gated on the pending legal review — see landing/legal/README.md.)
+   * not live yet — pending legal sign-off before any crypto address is shown.)
    */
   onChainConsent:
     "On-chain contributions are public and permanent. If you send USDC to this address, " +

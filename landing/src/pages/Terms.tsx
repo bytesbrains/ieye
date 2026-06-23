@@ -11,11 +11,9 @@ import { LEGAL } from "../lib/legalCopy";
 //
 // Plain, conservative, scoped to what the site does today. The contribution
 // wording is pulled from the canonical single source (lib/legalCopy) so it can't
-// drift from the approved "contribution, not donation" text. The internal
-// draft (with the [pending] items — governing law, liability,
-// jurisdiction-specific solicitation wording) lives in
-// landing/legal/terms-of-service.md and remains Legal-gated (#38/#39) before the
-// site relies on the binding clauses.
+// drift from the approved "contribution, not donation" text. The binding clauses
+// (governing law, liability, jurisdiction-specific solicitation wording) remain
+// Legal-gated before the site relies on them.
 export function Terms() {
   return (
     <LegalPageLayout

@@ -4,9 +4,6 @@
 # without a Legal look. (Solo repo today — @bytesbrains stands in for the Legal/GC
 # review gate; replace with a @org/legal team when one exists.)
 
-# The legal artifacts themselves — any change is a Legal review.
-/landing/legal/                              @bytesbrains
-
 # Contribution-facing copy / CTAs / honesty lines — the drift surface the
 # disclaimer warns about. Changing these must go past Legal so "donate" never
 # slips into a button and the disclaimer wording can't quietly diverge.

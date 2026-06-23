@@ -3,7 +3,7 @@
 **Status:** ACTIVE · **Owner:** Security · **Co-signer:** Legal · **Issue:** #68 (parent epic #60)
 **Applies to:** every new liveness/sensor source integration — Tier‑1 home mesh (#65), Tier‑2 wearable (#66), Tier‑3 custom HW (#67), and any future source.
 
-> **This is a blocking gate.** No source-integration PR merges without passing the checklist below and recording the Security + Legal sign-off. The line cannot slip per‑vendor; if a vendor SDK cannot meet it, the vendor is rejected, not the rule.
+> **This is a blocking gate.** No source-integration PR merges without passing the checklist below and recording the security + legal sign-off. The line cannot slip per‑vendor; if a vendor SDK cannot meet it, the vendor is rejected, not the rule.
 
 ---
 
@@ -62,8 +62,8 @@ A PR that cannot tick every box is **not** a design problem to negotiate — it 
 
 ## Sign-off
 
-**Security (security mandate).** The five rules above are each pinned to an existing, reviewable code boundary (`LivenessSource` / `LivenessAssessment`, `WelfareSignal`/`TriggerSink`, on‑device `RhythmModel`), so conformance is a structural fact a reviewer can verify, not a vendor promise. This is enforce‑structurally‑not‑by‑convention applied to the sensor frontier. **Approved as the blocking gate for all Tier‑1+ source integrations.** — Security
+**Security mandate.** The five rules above are each pinned to an existing, reviewable code boundary (`LivenessSource` / `LivenessAssessment`, `WelfareSignal`/`TriggerSink`, on‑device `RhythmModel`), so conformance is a structural fact a reviewer can verify, not a vendor promise. This is enforce‑structurally‑not‑by‑convention applied to the sensor frontier. **Approved as the blocking gate for all Tier‑1+ source integrations.**
 
-**Legal (counsel mandate).** The standard keeps iEye off the controller path for health‑adjacent and location data by ensuring such data is neither transmitted nor stored off‑device (GDPR / UK‑GDPR, India DPDP, Singapore PDPA). Rule 2 (no cloud inference) and Rule 5 (on‑device learned state) are the load‑bearing clauses for that posture; Rule 3 preserves the welfare/secret separation that keeps the benign trigger benign. The D‑041 push‑server gate for Easy mode is unaffected and still required separately. **Approved; this gate must be linked from and block the Tier‑1 integrations issue (#65).** — Legal
+**Legal mandate.** The standard keeps iEye off the controller path for health‑adjacent and location data by ensuring such data is neither transmitted nor stored off‑device (GDPR / UK‑GDPR, India DPDP, Singapore PDPA). Rule 2 (no cloud inference) and Rule 5 (on‑device learned state) are the load‑bearing clauses for that posture; Rule 3 preserves the welfare/secret separation that keeps the benign trigger benign. The D‑041 push‑server gate for Easy mode is unaffected and still required separately. **Approved; this gate must be linked from and block the Tier‑1 integrations issue (#65).**
 
 > Sign-off is captured by merging this standard to `main`. Re-review is required if any of the five rules is amended.

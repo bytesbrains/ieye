@@ -2,7 +2,7 @@
 
 The public, hope-first landing page for **iEye** — a welfare / liveness app built on the
 Maktub Protocol: _iEye gets help to you in time_ — plus the **Phase-1.5 authenticated app**
-(#43): Google sign-in, a user account, and an admin shell, built on top of the Security's
+(#43): Google sign-in, a user account, and an admin shell, built on top of the
 Firestore security rules and runnable entirely against the **Firebase emulator** (no real
 Firebase project required).
 
@@ -85,12 +85,12 @@ data locally, add docs via the **emulator UI** (`http://127.0.0.1:4000` → Fire
 ```
 landing/
 ├─ firebase.json            # Hosting → dist/ + Auth/Firestore emulator config
-├─ firestore.rules          # Security security boundary (the real authz)
+├─ firestore.rules          # security boundary (the real authz)
 ├─ firestore.indexes.json   # composite indexes
 ├─ .env.example             # emulator switch + Firebase config seam (#42)
 ├─ scripts/
 │  └─ grant-admin.mjs       # LOCAL ONLY: mint admin claim in the Auth emulator
-├─ firestore-tests/         # Security emulator-backed rules tests
+├─ firestore-tests/         # emulator-backed rules tests
 └─ src/
    ├─ App.tsx               # public landing assembly (Phase 1)
    ├─ main.tsx              # router + lazy auth shell

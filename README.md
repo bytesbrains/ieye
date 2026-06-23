@@ -15,4 +15,4 @@ Spec & decisions: Maktub repo, issue #274.
 
 > Brand guardrail: iEye watches **over** you, never watches **you**. Always "looking out for / you are seen / never alone" — never "monitor / track / surveil."
 
-_Status: pre-development. Detection brain green-lit to prototype; signing path gated on Architect (scoped session key) and Easy mode gated on Security + Legal._
+_Status: pre-development. The on-device detection brain is the first prototype; the Sovereign signing path (scoped session key) and Easy mode (backend) are still in design._
