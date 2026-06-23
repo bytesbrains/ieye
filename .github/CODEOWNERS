@@ -1,22 +1,22 @@
 # CODEOWNERS — mechanizes the "route past Legal" rule (#38/#39, CLAUDE.md
 # "enforce structurally, not by convention"). Listed owners are auto-requested as
 # reviewers on any PR touching these paths, so legal-sensitive wording can't ship
-# without a Legal look. (Solo repo today — @nandal stands in for the Legal/GC
+# without a Legal look. (Solo repo today — @bytesbrains stands in for the Legal/GC
 # review gate; replace with a @org/legal team when one exists.)
 
 # The legal artifacts themselves — any change is a Legal review.
-/landing/legal/                              @nandal
+/landing/legal/                              @bytesbrains
 
 # Contribution-facing copy / CTAs / honesty lines — the drift surface the
 # disclaimer warns about. Changing these must go past Legal so "donate" never
 # slips into a button and the disclaimer wording can't quietly diverge.
-/landing/src/components/Contribute.tsx       @nandal
-/landing/src/components/Footer.tsx           @nandal
-/landing/src/components/HonestyLine.tsx      @nandal
+/landing/src/components/Contribute.tsx       @bytesbrains
+/landing/src/components/Footer.tsx           @bytesbrains
+/landing/src/components/HonestyLine.tsx      @bytesbrains
 
 # Published legal pages + their canonical wording / version — Legal review.
-/landing/src/pages/Privacy.tsx               @nandal
-/landing/src/pages/Terms.tsx                 @nandal
-/landing/src/components/legal/               @nandal
-/landing/src/lib/legalCopy.ts                @nandal
-/landing/src/lib/consentVersion.ts           @nandal
+/landing/src/pages/Privacy.tsx               @bytesbrains
+/landing/src/pages/Terms.tsx                 @bytesbrains
+/landing/src/components/legal/               @bytesbrains
+/landing/src/lib/legalCopy.ts                @bytesbrains
+/landing/src/lib/consentVersion.ts           @bytesbrains
