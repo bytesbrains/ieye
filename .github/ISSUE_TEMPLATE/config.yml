@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/bytesbrains/ieye/security/advisories/new
+    about: Report security issues privately — never in a public issue. See SECURITY.md.
+  - name: Maktub Protocol
+    url: https://maktub.it
+    about: iEye is built on the Maktub Protocol — protocol-level questions go here.

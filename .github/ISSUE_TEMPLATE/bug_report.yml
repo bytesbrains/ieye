@@ -1,0 +1,61 @@
+name: Bug report
+description: Something isn't working the way it should
+title: "fix: <short summary>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. **Do not file security vulnerabilities here** —
+        follow [SECURITY.md](https://github.com/bytesbrains/ieye/blob/main/SECURITY.md) instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of iEye?
+      options:
+        - app (Flutter)
+        - landing / web app
+        - docs
+        - other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: A clear description of the bug, including the impact.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Do '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, device, Flutter/Node version, browser — whatever is relevant.
+    validations:
+      required: false
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Confirmations
+      options:
+        - label: This is not a security vulnerability (those go to security@ieye.in).
+          required: true
+        - label: I searched existing issues and this isn't a duplicate.
+          required: true

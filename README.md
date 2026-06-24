@@ -16,3 +16,24 @@ Spec & decisions: Maktub repo, issue #274.
 > Brand guardrail: iEye watches **over** you, never watches **you**. Always "looking out for / you are seen / never alone" — never "monitor / track / surveil."
 
 _Status: pre-development. The on-device detection brain is the first prototype; the Sovereign signing path (scoped session key) and Easy mode (backend) are still in design._
+
+## Repository
+
+| Path | What it is |
+|---|---|
+| [`app/`](app/README.md) | Flutter app (iOS + Android) — the on-device detection brain |
+| [`landing/`](landing/README.md) | Vite + React landing page + Phase-1.5 auth app (runs against the Firebase emulator) |
+| [`docs/standards/`](docs/standards/README.md) | Enforceable engineering standards (blocking design gates) |
+| [`brand/`](brand/) | Logo, app icon, brand assets |
+| [`CLAUDE.md`](CLAUDE.md) | Product principles & the non-negotiable guardrails — start here |
+
+## Contributing
+
+Contributions are welcome. Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** and
+the [non-negotiable guardrails](CLAUDE.md) before opening a PR, and be aware of our
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+- 🐛 Bugs & ✨ features: use the [issue templates](.github/ISSUE_TEMPLATE).
+- 🔒 Security: **never** in a public issue — see [SECURITY.md](SECURITY.md).
+
+iEye is [MIT licensed](LICENSE).

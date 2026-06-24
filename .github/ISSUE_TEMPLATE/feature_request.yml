@@ -1,0 +1,53 @@
+name: Feature request
+description: Propose a change or new capability
+title: "feat: <short summary>"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please open an issue **before** building anything non-trivial, so we can
+        agree on the approach. New features must respect iEye's
+        [non-negotiable guardrails](https://github.com/bytesbrains/ieye/blob/main/CLAUDE.md).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - app (Flutter)
+        - landing / web app
+        - docs
+        - other / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What need or gap does this address? Who is affected?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+  - type: checkboxes
+    id: guardrails
+    attributes:
+      label: Guardrail check
+      description: Confirm this proposal holds the lines in CLAUDE.md.
+      options:
+        - label: It keeps the welfare alert benign — never carrying or triggering an irreversible secret/will.
+          required: true
+        - label: It keeps liveness as one bit at the edge — no logging/syncing of GPS traces, rhythm baselines, or unlock timelines.
+          required: true
+        - label: Its copy/UX watches *over* the user, never watches them; it promises the mechanism, never the outcome.
+          required: true
