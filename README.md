@@ -33,6 +33,7 @@ Contributions are welcome. Please read **[CONTRIBUTING.md](CONTRIBUTING.md)** an
 the [non-negotiable guardrails](CLAUDE.md) before opening a PR, and be aware of our
 [Code of Conduct](CODE_OF_CONDUCT.md).
 
+- 🌱 Base your work on **`dev`** (the default branch); `main` is released/stable.
 - 🐛 Bugs & ✨ features: use the [issue templates](.github/ISSUE_TEMPLATE).
 - 🔒 Security: **never** in a public issue — see [SECURITY.md](SECURITY.md).
 

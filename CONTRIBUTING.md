@@ -57,18 +57,25 @@ Pick the area you're working in and follow its README — both run fully locally
   authenticated app runs entirely against the **Firebase emulator** — no real
   Firebase project required (see `landing/README.md`).
 
+## Branches
+
+- **`dev`** is the integration branch — **all contributions target `dev`.** It is
+  the repository's default branch, so new PRs are based on it automatically.
+- **`main`** is the released / stable branch. It only receives merges from `dev`
+  at release time (and the occasional hotfix). Don't open PRs against `main`.
+
 ## Workflow
 
 1. **Open an issue first** for anything beyond a trivial fix, so we can agree on
    the approach before you build it. Check existing issues to avoid duplicates.
-2. **Branch** from `main`. Use a descriptive name, e.g.
+2. **Branch from `dev`.** Use a descriptive name, e.g.
    `feat/tier1-pir-source`, `fix/auth-redirect`, `docs/contributing`.
 3. **Make focused changes.** One logical change per PR. Match the style of the
    surrounding code — its naming, comment density, and idioms.
 4. **Commit with [Conventional Commits](https://www.conventionalcommits.org).**
    Match the existing history: `feat(app): …`, `fix(web): …`, `docs(security): …`,
    `chore: …`. Reference the issue: `feat(app): per-person rhythm baseline (#64)`.
-5. **Open a PR** against `main` using the template. Describe what changed, why,
+5. **Open a PR against `dev`** using the template. Describe what changed, why,
    and how you verified it. Link the issue. CODEOWNERS will auto-request reviewers
    for guardrail-sensitive paths.
 
