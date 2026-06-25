@@ -26,6 +26,8 @@ build/
 
 # Claude Code — internal tooling / local state, never published
 .claude/
+.awareness/
+.supervisor/
 
 # Scratch
 tmp/
