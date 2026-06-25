@@ -4,6 +4,11 @@
 # detection brain analyzes + tests) actually held. All jobs run on every PR so
 # branch-protection "required status checks" behave predictably (no path-filtered
 # job that silently never reports). Keep them fast; split later if needed.
+#
+# Third-party actions are pinned to a full commit SHA (tag in trailing comment),
+# not a mutable tag — a hijacked tag would run arbitrary code in CI. Blast radius
+# is already bounded (contents:read, no secrets in these jobs), this is
+# defense-in-depth. dependabot.yml keeps the pins fresh so they don't rot.
 name: CI
 
 on:
@@ -24,14 +29,18 @@ jobs:
   app:
     name: App · flutter analyze + test
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      # Pin the Flutter version for reproducibility — `stable` floats and a new
+      # release can redden `flutter analyze` on an unrelated PR. 3.44.4 ships
+      # Dart 3.12.2, which satisfies the app's sdk: ^3.11.4 constraint.
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
-          channel: stable
+          flutter-version: 3.44.4
           cache: true
       - run: flutter pub get
       - run: flutter analyze
@@ -40,12 +49,13 @@ jobs:
   landing:
     name: Landing · type-check + build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: landing
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -56,12 +66,13 @@ jobs:
   functions:
     name: Functions · type-check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: landing/functions
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
@@ -72,18 +83,19 @@ jobs:
   rules:
     name: Firestore rules · emulator tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: landing/firestore-tests
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: landing/firestore-tests/package-lock.json
       # The Firebase emulator is a JVM app; the suite spins it up via emulators:exec.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9 # v4
         with:
           distribution: temurin
           java-version: 17
