@@ -1,0 +1,13 @@
+# Keeps the SHA-pinned GitHub Actions in workflows/ fresh. Pinning to a commit
+# without this just trades a supply-chain risk for staleness — Dependabot opens
+# PRs that bump the SHA and update the trailing # vX comment, preserving the pin.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+    labels:
+      - dependencies
