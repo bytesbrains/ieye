@@ -1,0 +1,91 @@
+# CI — makes the "green check" in CONTRIBUTING.md real. Each job runs the exact
+# gate a contributor is told to run locally, so a passing PR means the gates the
+# product depends on (rules = the security boundary, honesty copy builds, the
+# detection brain analyzes + tests) actually held. All jobs run on every PR so
+# branch-protection "required status checks" behave predictably (no path-filtered
+# job that silently never reports). Keep them fast; split later if needed.
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev, main]
+
+# Supersede in-flight runs for the same ref to save minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  app:
+    name: App · flutter analyze + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  landing:
+    name: Landing · type-check + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: landing/package-lock.json
+      - run: npm ci
+      - run: npm run build # tsc -b && vite build — the honesty copy must compile
+
+  functions:
+    name: Functions · type-check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing/functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: landing/functions/package-lock.json
+      - run: npm ci
+      - run: npm run build # tsc — the non-money backend must compile
+
+  rules:
+    name: Firestore rules · emulator tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: landing/firestore-tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: landing/firestore-tests/package-lock.json
+      # The Firebase emulator is a JVM app; the suite spins it up via emulators:exec.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npm test # firebase emulators:exec ... 'vitest run' — the real security boundary

@@ -1,5 +1,8 @@
 # iEye
 
+[![CI](https://github.com/bytesbrains/ieye/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/bytesbrains/ieye/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 > *I eye you — I watch over you.*
 
 **iEye** (`ieye.in`) is a welfare / liveness app: if someone who lives alone goes silent, the people they chose are alerted — so they are **found in hours, not weeks.**
