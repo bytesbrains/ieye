@@ -1,0 +1,47 @@
+title: "[Proposal] "
+labels: ["proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing an idea for iEye. This is the place for "should we…?"
+        and "what if…?" — *before* anything is scoped into an Issue. Read the
+        [guardrails](../blob/dev/CLAUDE.md) first; proposals that touch one need an
+        [ADR](../blob/dev/docs/adr/README.md) when they're implemented.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem or opportunity?
+      description: The situation and the forces at play. What makes this worth doing?
+      placeholder: People who live alone with only a phone (Tier-0) can't…
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Your idea, concretely enough that others can react to it. Sketches and rough edges welcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: guardrail
+    attributes:
+      label: Does this touch a non-negotiable guardrail?
+      description: From CLAUDE.md. If yes, the implementing PR will need an ADR. Unsure is fine — say so.
+      options:
+        - "No — it doesn't touch a guardrail"
+        - "Benign payload (never a secret/will)"
+        - "Liveness is one bit, processed at the edge"
+        - "Honest coverage (no fake 'protected')"
+        - "Promise the mechanism, never the outcome"
+        - "Cheap false alarms / alarm fatigue"
+        - "Not sure — let's figure it out here"
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: Especially the approach a reasonable person would reach for instead. Helps a future ADR.
+    validations:
+      required: false

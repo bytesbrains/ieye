@@ -26,6 +26,8 @@ _Status: pre-development. The on-device detection brain is the first prototype; 
 |---|---|
 | [`app/`](app/README.md) | Flutter app (iOS + Android) — the on-device detection brain |
 | [`landing/`](landing/README.md) | Vite + React landing page + Phase-1.5 auth app (runs against the Firebase emulator) |
+| [`docs/architecture.md`](docs/architecture.md) | How iEye is put together, and why — start here for the codebase |
+| [`docs/adr/`](docs/adr/README.md) | Architecture Decision Records — the *why* behind the design |
 | [`docs/standards/`](docs/standards/README.md) | Enforceable engineering standards (blocking design gates) |
 | [`brand/`](brand/) | Logo, app icon, brand assets |
 | [`CLAUDE.md`](CLAUDE.md) | Product principles & the non-negotiable guardrails — start here |
