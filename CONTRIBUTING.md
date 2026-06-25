@@ -45,6 +45,7 @@ expected, not a rejection.
 |---|---|---|
 | `app/` | Flutter app (iOS + Android), the on-device detection brain | [`app/README.md`](app/README.md) |
 | `landing/` | Vite + React landing page + Phase-1.5 auth app | [`landing/README.md`](landing/README.md) |
+| `docs/` | Architecture overview, decision records (ADRs), standards | [`docs/architecture.md`](docs/architecture.md) |
 | `docs/standards/` | Enforceable engineering standards (blocking design gates) | [`docs/standards/README.md`](docs/standards/README.md) |
 | `brand/` | Logo, app icon, brand assets | — |
 
@@ -78,6 +79,15 @@ Pick the area you're working in and follow its README — both run fully locally
 5. **Open a PR against `dev`** using the template. Describe what changed, why,
    and how you verified it. Link the issue. CODEOWNERS will auto-request reviewers
    for guardrail-sensitive paths.
+
+## Decisions & discussion
+
+- **Not scoped yet? Take it to [Discussions](../../discussions)** — "should we…?"
+  and "what if…?" belong in *Ideas & proposals*, questions in *Q&A*. Open an issue
+  once the approach is agreed (see [setup](docs/discussions-setup.md)).
+- **Touching a guardrail or making a non-obvious design call? Write an
+  [ADR](docs/adr/README.md)** in the same PR — a short record of *why*. The
+  [architecture overview](docs/architecture.md) is the map of how the pieces fit.
 
 ## Quality gates
 
