@@ -1,8 +1,12 @@
-// iEye web backend — non-money Cloud Functions.
+// iEye web backend — Cloud Functions.
 //
 // Region pinned to asia-south1 (Mumbai) to sit next to Firestore and the
-// India-first user base. None of these functions touch money: the contributions
-// ledger and payment webhooks are a later, Legal-gated phase (#39).
+// India-first user base.
+//
+// The fiat money path (./stripe) is included but stays DARK by default: it is
+// gated by the FIAT_CONTRIB_ENABLED param (default "false") and unset Stripe
+// secrets, so deploying it does not turn money on — flipping it live is a
+// deliberate act once Legal (#39) clears. Everything else is non-money.
 
 import { setGlobalOptions } from "firebase-functions/v2";
 
@@ -11,3 +15,4 @@ setGlobalOptions({ region: "asia-south1", maxInstances: 10 });
 export { grantAdmin, revokeAdmin } from "./adminClaims";
 export { onUserWritten } from "./publicSupporters";
 export { onContributorRequestInvited } from "./invitations";
+export { createContributionCheckout, stripeWebhook } from "./stripe";
