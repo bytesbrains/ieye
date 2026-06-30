@@ -243,7 +243,9 @@ export function Account() {
       {/* Repo is public (#1): GitHub is the primary path. The request-to-
           participate form stays as an optional "introduce yourself" channel. */}
       <Card title="Help build iEye">
-        <WaysToContribute />
+        {/* Pass a title so the block adds an <h3> between the Card's <h2> and the
+            per-way <h4>s — keeps the heading outline skip-free (a11y). */}
+        <WaysToContribute title="Ways to contribute" />
 
         <div className="mt-8 border-t-2 border-charcoal/10 pt-6">
           <h3 className="text-base font-semibold text-charcoal">

@@ -10,6 +10,6 @@ export const REPO_LINKS = {
   // GitHub's built-in "ways to contribute" page — surfaces good-first issues.
   goodFirstIssues: `${GITHUB_REPO}/contribute`,
   pulls: `${GITHUB_REPO}/pulls`,
-  contributing: `${GITHUB_REPO}/blob/dev/CONTRIBUTING.md`,
-  codeOfConduct: `${GITHUB_REPO}/blob/dev/CODE_OF_CONDUCT.md`,
+  contributing: `${GITHUB_REPO}/blob/HEAD/CONTRIBUTING.md`,
+  codeOfConduct: `${GITHUB_REPO}/blob/HEAD/CODE_OF_CONDUCT.md`,
 } as const;
