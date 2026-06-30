@@ -1,0 +1,29 @@
+# gitleaks configuration — EXTENDS the built-in default ruleset.
+#
+# gitleaks auto-discovers this file at the repo root, so BOTH gates use it and
+# behave identically:
+#   - .githooks/pre-commit          -> gitleaks git --staged   (local, fast)
+#   - .github/workflows/ci.yml      -> gitleaks git            (CI, full history)
+#
+# useDefault = true keeps EVERY upstream rule; we only add on top. Never replace
+# the default set — that would silently drop detections.
+
+title = "iEye gitleaks config"
+
+[extend]
+useDefault = true
+
+# ---------------------------------------------------------------------------
+# Allowlist — keep this TIGHT. Every entry here is a place gitleaks will stop
+# looking, so it can hide a real secret. Add only proven, low-risk noise, and
+# prefer a narrow regexTarget/path over a broad one. Use a `gitleaks:allow`
+# trailing comment in source for one-off false positives instead of a rule here.
+[allowlist]
+description = "Repo-wide allowlist"
+paths = [
+  # Dependency lockfiles: integrity hashes (sha512-…) trip generic/entropy
+  # rules but are not secrets. Real credentials never belong in a lockfile.
+  '''(^|/)package-lock\.json$''',
+  # Vendored dependencies are never scanned for OUR secrets.
+  '''(^|/)node_modules/''',
+]

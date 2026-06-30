@@ -58,6 +58,18 @@ Pick the area you're working in and follow its README — both run fully locally
   authenticated app runs entirely against the **Firebase emulator** — no real
   Firebase project required (see `landing/README.md`).
 
+**Enable the secret-scanning hook (one time, every clone):**
+
+```bash
+brew install gitleaks            # or see github.com/gitleaks/gitleaks#installing
+git config core.hooksPath .githooks
+```
+
+This points git at the repo's versioned [`.githooks/`](.githooks/) so every
+commit is scanned for secrets before it lands. The hook **fails loudly** if
+gitleaks isn't installed (a silently-skipped scan is worse than none). CI runs
+the same scan as a server-side backstop, so this gate can't be quietly skipped.
+
 ## Branches
 
 - **`dev`** is the integration branch — **all contributions target `dev`.** It is
@@ -106,6 +118,11 @@ npm run build        # type-check + production build
 Firestore rules changes must keep the emulator-backed rules tests passing
 (`landing/firestore-tests/`). The rules are the real security boundary, not the
 UI — see [`THREAT-MODEL.md`](landing/firestore-tests/THREAT-MODEL.md).
+
+**Secrets (all paths):** never commit credentials. The `core.hooksPath` hook
+above scans every commit, and the CI `Secrets · gitleaks scan` job re-scans on
+every PR. To scan on demand: `gitleaks git --no-banner` (history) or
+`gitleaks git --staged --no-banner` (your staged diff).
 
 ## Reporting bugs & requesting features
 
