@@ -102,6 +102,13 @@ export const createContributionCheckout = onCall(
       cancel_url: `${origin}/?contribution=cancelled#contribute`,
     });
 
+    if (!session.url) {
+      // Stripe should always return a hosted URL for mode:"payment"; treat a
+      // missing one as a server error rather than handing the client a null.
+      logger.error("checkout session has no URL", { uid: req.auth.uid, sessionId: session.id });
+      throw new HttpsError("internal", "Couldn’t start checkout. Please try again.");
+    }
+
     logger.info("checkout session created", { uid: req.auth.uid, amountMinor });
     return { url: session.url };
   }
