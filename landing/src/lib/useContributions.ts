@@ -4,16 +4,22 @@
 // Until the backend writes ledger entries (#42/Phase 2), this is empty.
 
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, orderBy, query, where } from "firebase/firestore";
+import { collection, limit, onSnapshot, orderBy, query, where } from "firebase/firestore";
 import { db } from "./firebase";
 import type { ContributionDoc, WithId } from "./types";
 import { useAuth } from "../auth/AuthProvider";
 
-export function useMyContributions() {
+const DEFAULT_PAGE = 25;
+
+// Paginated so a long-running supporter's history never triggers an unbounded
+// read or a runaway DOM: the live query is capped at `limitN` (most recent
+// first), and loadMore() grows the window a page at a time (re-subscribes).
+export function useMyContributions(pageSize = DEFAULT_PAGE) {
   const { user } = useAuth();
   const [rows, setRows] = useState<WithId<ContributionDoc>[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [limitN, setLimitN] = useState(pageSize);
 
   useEffect(() => {
     if (!user) {
@@ -25,7 +31,8 @@ export function useMyContributions() {
     const q = query(
       collection(db, "contributions"),
       where("ownerUid", "==", user.uid),
-      orderBy("timestamp", "desc")
+      orderBy("timestamp", "desc"),
+      limit(limitN)
     );
     const unsub = onSnapshot(
       q,
@@ -39,7 +46,11 @@ export function useMyContributions() {
       }
     );
     return unsub;
-  }, [user]);
+  }, [user, limitN]);
 
-  return { rows, loading, error };
+  // If the page came back full there may be more; growing the limit re-queries.
+  const hasMore = rows.length === limitN;
+  const loadMore = () => setLimitN((n) => n + pageSize);
+
+  return { rows, loading, error, hasMore, loadMore };
 }
