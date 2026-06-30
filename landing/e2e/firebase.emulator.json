@@ -1,0 +1,13 @@
+{
+  "//": "E2E-only Firebase config. Identical rules to the repo's firebase.json, but the emulators bind 0.0.0.0 so the host (Playwright + the browser) can reach them through Docker port mapping. Auth + Firestore only — functions are not run here (the landing e2e is auth/firestore-driven; the fiat callable needs Stripe and isn't end-to-end-able). See e2e/README.md.",
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "emulators": {
+    "auth": { "host": "0.0.0.0", "port": 9099 },
+    "firestore": { "host": "0.0.0.0", "port": 8080 },
+    "ui": { "enabled": false },
+    "singleProjectMode": true
+  }
+}
