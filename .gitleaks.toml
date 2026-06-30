@@ -21,9 +21,8 @@ useDefault = true
 [allowlist]
 description = "Repo-wide allowlist"
 paths = [
-  # Dependency lockfiles: integrity hashes (sha512-…) trip generic/entropy
-  # rules but are not secrets. Real credentials never belong in a lockfile.
-  '''(^|/)package-lock\.json$''',
-  # Vendored dependencies are never scanned for OUR secrets.
+  # Vendored dependencies are never scanned for OUR secrets. (Lockfiles are
+  # deliberately NOT allowlisted — they're scanned, so a secret pasted into one
+  # is still caught; gitleaks' default rules don't flag npm integrity hashes.)
   '''(^|/)node_modules/''',
 ]
