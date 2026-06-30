@@ -1,0 +1,29 @@
+#!/bin/sh
+# pi-contrib-gate: secret scanning (VERSIONED hook).
+#
+# This lives in the repo (unlike .git/hooks/, which git never tracks) so every
+# clone runs the same gate. Enable it once after cloning:
+#
+#     git config core.hooksPath .githooks
+#
+# (CONTRIBUTING.md "Getting set up" documents this; CI runs the same scan as a
+# server-side backstop, so a missing/bypassed local hook can't reach a branch.)
+#
+# Scans the STAGED diff with gitleaks. If gitleaks is missing we FAIL LOUDLY
+# rather than skip silently — a silently-skipped scan reads as "scanned, clean",
+# which is exactly how a secret slips through.
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --staged --no-banner --redact || exit 1
+else
+  echo "" >&2
+  echo "✖ pre-commit: gitleaks is not installed — secret scanning is REQUIRED." >&2
+  echo "  Install it, then commit again:" >&2
+  echo "    macOS:  brew install gitleaks" >&2
+  echo "    other:  https://github.com/gitleaks/gitleaks#installing" >&2
+  echo "" >&2
+  echo "  Emergency bypass (discouraged — leaves your diff unscanned):" >&2
+  echo "    git commit --no-verify" >&2
+  echo "" >&2
+  exit 1
+fi
