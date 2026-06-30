@@ -18,3 +18,16 @@ export function formatAmount(amountWei?: string, asset?: string): string {
   }
   return `${grouped} ${asset ?? "wei"}`;
 }
+
+// Fiat amounts are stored in MINOR units (cents) as integer strings
+// (ContributionDoc.amountMinor). Render them as a localized currency string.
+export function formatFiatMinor(amountMinor?: string, currency?: string): string {
+  if (!amountMinor) return "—";
+  const cur = (currency ?? "SGD").toUpperCase();
+  try {
+    const major = Number(BigInt(amountMinor)) / 100;
+    return new Intl.NumberFormat("en-SG", { style: "currency", currency: cur }).format(major);
+  } catch {
+    return `${amountMinor} ${cur}`;
+  }
+}

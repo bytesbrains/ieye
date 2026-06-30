@@ -38,9 +38,17 @@ export type ContributionMethod = "card" | "bank" | "crypto" | "inkind" | "labor"
 export interface ContributionDoc {
   ownerUid: string;
   kind: ContributionKind;
-  /** Wei-native amount string for money lines (no fiat literals). */
+  /** Wei-native amount string for crypto money lines (no fiat literals). */
   amountWei?: string;
   asset?: string;
+  /** Fiat amount in MINOR units (cents) as a string — no floats in money. */
+  amountMinor?: string;
+  /** ISO currency code for fiat lines, e.g. "SGD". */
+  currency?: string;
+  /** Payment provider for money lines, e.g. "stripe". */
+  provider?: string;
+  /** Provider's session/charge id, for reconciliation. */
+  providerSessionId?: string;
   method: ContributionMethod;
   /** Set by backend from consent state — never by the client. */
   isPublic?: boolean;

@@ -8,9 +8,10 @@
 // claim (not read here); opt-in toggles live on the user's own doc.
 
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { AppLayout } from "../components/app/AppLayout";
 import { OptInToggle } from "../components/app/OptInToggle";
+import { ContributeMoney } from "../components/app/ContributeMoney";
 import { Spinner } from "../components/app/Spinner";
 import { useAuth } from "../auth/AuthProvider";
 import { CONSENT_VERSION, upsertUserProfile, useUserDoc } from "../lib/useUserDoc";
@@ -19,8 +20,9 @@ import {
   createContributorRequest,
   useMyContributorRequests,
 } from "../lib/useContributorRequest";
-import { formatAmount } from "../lib/format";
+import { formatAmount, formatFiatMinor } from "../lib/format";
 import { LEGAL } from "../lib/legalCopy";
+import { FIAT_CONTRIB_ENABLED } from "../lib/flags";
 
 function Card({
   title,
@@ -48,6 +50,9 @@ export function Account() {
   const { data: profile, loading: profileLoading } = useUserDoc();
   const { rows: contributions, loading: contribLoading } = useMyContributions();
   const { rows: requests, loading: reqLoading } = useMyContributorRequests();
+  const [searchParams] = useSearchParams();
+  // Set by Stripe Checkout's success_url after a completed contribution.
+  const justContributed = searchParams.get("contribution") === "thanks";
 
   // First-visit: seed the user doc from the Google profile + record consent.
   useEffect(() => {
@@ -76,6 +81,28 @@ export function Account() {
         your phone. Manage how you appear, see anything you&rsquo;ve contributed, and ask to help
         build iEye.
       </p>
+
+      {/* Thank-you, shown on return from a completed Stripe Checkout. The
+          contribution itself is recorded by the webhook, not this page. */}
+      {justContributed && (
+        <div
+          role="status"
+          className="mt-6 rounded-2xl border-2 border-teal-deep/30 bg-teal/5 p-6"
+        >
+          <p className="text-lg font-semibold text-charcoal">Thank you for contributing.</p>
+          <p className="mt-2 max-w-prose text-base text-charcoal-soft">
+            Your contribution helps get help to people in time. Once it&rsquo;s confirmed it will
+            appear under <strong>Your contributions</strong> below, and on the public ledger.
+          </p>
+        </div>
+      )}
+
+      {/* ---- Make a contribution (fiat) — flag-gated (#39/#54) ---- */}
+      {FIAT_CONTRIB_ENABLED && (
+        <Card title="Make a contribution">
+          <ContributeMoney />
+        </Card>
+      )}
 
       {/* ---- Profile ---- */}
       <Card title="Profile">
@@ -174,8 +201,16 @@ export function Account() {
                   <p className="text-sm text-charcoal-soft">{c.method}</p>
                 </div>
                 <div className="text-right">
-                  {c.amountWei && (
-                    <p className="text-base text-charcoal">{formatAmount(c.amountWei, c.asset)}</p>
+                  {c.amountMinor ? (
+                    <p className="text-base text-charcoal">
+                      {formatFiatMinor(c.amountMinor, c.currency)}
+                    </p>
+                  ) : (
+                    c.amountWei && (
+                      <p className="text-base text-charcoal">
+                        {formatAmount(c.amountWei, c.asset)}
+                      </p>
+                    )
                   )}
                   <p className="text-sm text-charcoal-muted">{c.status ?? ""}</p>
                 </div>
