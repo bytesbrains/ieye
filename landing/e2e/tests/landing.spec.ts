@@ -42,7 +42,7 @@ test.describe("public landing page", () => {
 
   test("roadmap: four tiers, honest state pills, why-funds, honesty line", async ({ page }) => {
     const roadmap = page.locator("#roadmap");
-    await expect(roadmap.getByRole("heading", { name: "More senses. Never more surveillance." })).toBeVisible();
+    await expect(roadmap.getByRole("heading", { name: "More senses. Never less privacy." })).toBeVisible();
     await expect(roadmap.getByText("Where iEye is going")).toBeVisible();
 
     for (const tier of [
@@ -63,8 +63,9 @@ test.describe("public landing page", () => {
     await expect(roadmap.getByText("Hardware buys signal")).toBeVisible();
     await expect(roadmap.getByText(/not a substitute for emergency services/i)).toBeVisible();
 
-    // Brand guardrail: no surveillance verbs leak into the roadmap copy.
-    await expect(roadmap).not.toContainText(/\bsurveil\b/i);
+    // Brand guardrail: no surveillance vocabulary in the roadmap copy. Broad
+    // match — "surveil" also catches "surveillance" (prior \bsurveil\b missed it).
+    await expect(roadmap).not.toContainText(/surveil|monitor|track you|spy/i);
   });
 
   test("contribute: waitlist, skills, and (default) funder-interest panel", async ({ page }) => {
