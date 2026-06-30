@@ -24,7 +24,7 @@ import type {
   UserDoc,
   WithId,
 } from "../lib/types";
-import { formatAmount } from "../lib/format";
+import { formatAmount, formatFiatMinor } from "../lib/format";
 import { adminActionError, callGrantAdmin, callRevokeAdmin } from "../lib/adminActions";
 import { useAuth } from "../auth/AuthProvider";
 
@@ -287,7 +287,11 @@ function ContributionsLedger() {
                 <tr key={c.id} className="border-b border-charcoal/5">
                   <td className="py-2 pr-4 capitalize">{c.kind}</td>
                   <td className="py-2 pr-4">{c.method}</td>
-                  <td className="py-2 pr-4">{formatAmount(c.amountWei, c.asset)}</td>
+                  <td className="py-2 pr-4">
+                    {c.amountMinor
+                      ? formatFiatMinor(c.amountMinor, c.currency)
+                      : formatAmount(c.amountWei, c.asset)}
+                  </td>
                   <td className="py-2 pr-4">{c.status ?? "—"}</td>
                   <td className="py-2 text-charcoal-faint">{c.ownerUid}</td>
                 </tr>
