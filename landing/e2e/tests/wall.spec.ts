@@ -37,6 +37,17 @@ test.describe("supporter wall (live)", () => {
     await expect(wall.getByText(/supporter wall is coming soon/i)).toHaveCount(0);
   });
 
+  test("only consented (projected) names appear — others never do", async ({ page }) => {
+    // Only opted-in supporters are ever projected into publicSupporters. A name
+    // that was never projected (no consent) simply isn't in the collection, so
+    // it can't appear — the wall is structurally incapable of showing it.
+    await seedPublicSupporter("Consented Carol");
+    await page.goto("/");
+    const wall = page.locator("#transparency");
+    await expect(wall.getByText("Consented Carol")).toBeVisible();
+    await expect(wall.getByText("Hidden Hank")).toHaveCount(0);
+  });
+
   test("PRIVACY: only the display name is visible — never email or amount", async ({ page }) => {
     // Even if a row somehow carried private fields, the wall must not render them.
     await seedDoc("publicSupporters", {
