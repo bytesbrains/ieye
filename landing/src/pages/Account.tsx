@@ -12,6 +12,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { AppLayout } from "../components/app/AppLayout";
 import { OptInToggle } from "../components/app/OptInToggle";
 import { ContributeMoney } from "../components/app/ContributeMoney";
+import { WaysToContribute } from "../components/WaysToContribute";
 import { Spinner } from "../components/app/Spinner";
 import { useAuth } from "../auth/AuthProvider";
 import { CONSENT_VERSION, upsertUserProfile, useUserDoc } from "../lib/useUserDoc";
@@ -238,32 +239,49 @@ export function Account() {
         )}
       </Card>
 
-      {/* ---- Contributor request ---- */}
+      {/* ---- Help build iEye ---- */}
+      {/* Repo is public (#1): GitHub is the primary path. The request-to-
+          participate form stays as an optional "introduce yourself" channel. */}
       <Card title="Help build iEye">
-        {reqLoading ? (
-          <Spinner />
-        ) : requests.length > 0 ? (
-          <div>
-            <p className="text-base text-charcoal-soft">
-              You&rsquo;ve asked to help build iEye. Here&rsquo;s where that stands:
-            </p>
-            <ul className="mt-3 space-y-3">
-              {requests.map((r) => (
-                <li key={r.id} className="rounded-xl border border-charcoal/15 bg-paper p-4">
-                  <p className="text-base font-semibold capitalize text-charcoal">{r.status}</p>
-                  <p className="mt-1 text-sm text-charcoal-soft">
-                    {REQUEST_STATUS_COPY[r.status] ?? ""}
-                  </p>
-                  {r.skills && (
-                    <p className="mt-2 text-sm text-charcoal-muted">Skills: {r.skills}</p>
-                  )}
-                </li>
-              ))}
-            </ul>
+        {/* Pass a title so the block adds an <h3> between the Card's <h2> and the
+            per-way <h4>s — keeps the heading outline skip-free (a11y). */}
+        <WaysToContribute title="Ways to contribute" />
+
+        <div className="mt-8 border-t-2 border-charcoal/10 pt-6">
+          <h3 className="text-base font-semibold text-charcoal">
+            Prefer to introduce yourself first?
+          </h3>
+          <p className="mt-1 max-w-prose text-sm text-charcoal-soft">
+            Optional — tell us how you&rsquo;d like to help and we&rsquo;ll reach out. You can always
+            just open a discussion or pull request on GitHub above.
+          </p>
+          <div className="mt-4">
+            {reqLoading ? (
+              <Spinner />
+            ) : requests.length > 0 ? (
+              <div>
+                <p className="text-base text-charcoal-soft">
+                  You&rsquo;ve asked to help build iEye. Here&rsquo;s where that stands:
+                </p>
+                <ul className="mt-3 space-y-3">
+                  {requests.map((r) => (
+                    <li key={r.id} className="rounded-xl border border-charcoal/15 bg-paper p-4">
+                      <p className="text-base font-semibold capitalize text-charcoal">{r.status}</p>
+                      <p className="mt-1 text-sm text-charcoal-soft">
+                        {REQUEST_STATUS_COPY[r.status] ?? ""}
+                      </p>
+                      {r.skills && (
+                        <p className="mt-2 text-sm text-charcoal-muted">Skills: {r.skills}</p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <ContributorRequestForm uid={user.uid} />
+            )}
           </div>
-        ) : (
-          <ContributorRequestForm uid={user.uid} />
-        )}
+        </div>
       </Card>
 
       {/* ---- Funder / sponsor interest (#61) ---- */}

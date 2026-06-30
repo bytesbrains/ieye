@@ -83,6 +83,19 @@ test.describe("public landing page", () => {
     await expect(contribute.getByRole("button", { name: /^donate$/i })).toHaveCount(0);
   });
 
+  test("contribute: open-source paths point at the public GitHub repo", async ({ page }) => {
+    const contribute = page.locator("#contribute");
+    // The repo is public — concrete ways to help, linked to GitHub.
+    await expect(contribute.getByRole("heading", { name: /ways to contribute/i })).toBeVisible();
+    for (const way of [/join the discussion/i, /open a pull request/i, /write tests/i, /build the sdks/i]) {
+      await expect(contribute.getByRole("heading", { name: way })).toBeVisible();
+    }
+    // The primary CTA links to bytesbrains/ieye.
+    const ghLink = contribute.getByRole("link", { name: /view iEye on GitHub/i });
+    await expect(ghLink).toHaveAttribute("href", "https://github.com/bytesbrains/ieye");
+    await expect(ghLink).toHaveAttribute("target", "_blank");
+  });
+
   test("supporter wall is honestly 'coming soon'", async ({ page }) => {
     await expect(page.locator("#transparency").getByText(/supporter wall is coming soon/i)).toBeVisible();
   });
