@@ -54,7 +54,10 @@ export function Hero() {
               height={640}
               alt="A lighthouse standing on a calm sea at twilight, casting one warm beam of light out over the water — a beacon keeping watch."
               className="w-full rounded-2xl shadow-sm"
-              fetchPriority="high"
+              // Lowercase HTML attribute (typed via src/html-attrs.d.ts): React 18
+              // drops + warns on the camelCase fetchPriority prop, so we set the
+              // attribute React 18 actually emits — the LCP hint reaches the DOM.
+              fetchpriority="high"
             />
           </figure>
         </div>
