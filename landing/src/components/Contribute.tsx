@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { Section } from "./Section";
 import { WaitlistCta } from "./WaitlistCta";
+import { WaysToContribute } from "./WaysToContribute";
 import { LEGAL } from "../lib/legalCopy";
 import { FIAT_CONTRIB_ENABLED } from "../lib/flags";
+import { REPO_LINKS } from "../lib/repo";
 
 export function Contribute() {
   return (
@@ -38,30 +40,38 @@ export function Contribute() {
             </div>
           </div>
 
-          {/* Contribute your skills — sign in, then the contributor-request
-              form on /account (one source of truth, writes contributorRequests). */}
+          {/* Help build iEye — the repo is public (#1), so point straight at
+              GitHub. Detailed paths are in the WaysToContribute block below. */}
           <div className="rounded-2xl border-2 border-charcoal/10 bg-paper-dim p-7 sm:p-8">
             <h3 className="text-2xl font-semibold text-charcoal">Help build iEye</h3>
             <p className="mt-2 text-base text-charcoal-soft">
-              Give what you know — specs, testing, code, design, translation. iEye is built in the
-              open by people who care.
+              iEye is free and open source, built in public. The code, the issues, and the roadmap
+              all live on GitHub — no permission needed to jump in.
             </p>
-            <div className="mt-6">
-              <Link to="/account" className="btn btn-primary w-full">
-                {/* Google "G" glyph */}
-                <svg className="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-                  <path
-                    fill="#EA4335"
-                    d="M12 10.2v3.9h5.5c-.24 1.4-1.66 4.1-5.5 4.1a6.2 6.2 0 0 1 0-12.4c1.94 0 3.25.82 4 1.53l2.72-2.62C17.06 2.9 14.76 2 12 2a10 10 0 0 0 0 20c5.77 0 9.6-4.06 9.6-9.78 0-.66-.07-1.16-.16-1.66H12z"
-                  />
-                </svg>
-                Sign in to offer your skills
-              </Link>
-              <p className="mt-4 text-sm text-charcoal-muted">
-                You&rsquo;ll sign in with Google, then tell us how you can help on your account page.
-              </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                href={REPO_LINKS.repo}
+                className="btn btn-primary"
+              >
+                View on GitHub
+              </a>
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                href={REPO_LINKS.discussions}
+                className="btn btn-secondary"
+              >
+                Join the discussion
+              </a>
             </div>
           </div>
+        </div>
+
+        {/* Detailed, concrete ways to contribute now that the repo is public. */}
+        <div className="mt-12">
+          <WaysToContribute title="Ways to contribute" />
         </div>
 
         {/* Money panel. Two states, switched by the FIAT_CONTRIB_ENABLED flag
