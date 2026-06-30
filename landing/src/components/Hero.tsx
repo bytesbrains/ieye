@@ -54,7 +54,10 @@ export function Hero() {
               height={640}
               alt="A lighthouse standing on a calm sea at twilight, casting one warm beam of light out over the water — a beacon keeping watch."
               className="w-full rounded-2xl shadow-sm"
-              fetchPriority="high"
+              // React 18 doesn't map the camelCase fetchPriority prop — it warns
+              // and drops it. Pass the lowercase HTML attribute so the LCP
+              // priority hint actually reaches the DOM (and the warning is gone).
+              {...({ fetchpriority: "high" } as Record<string, string>)}
             />
           </figure>
         </div>
