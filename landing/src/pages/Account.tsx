@@ -48,7 +48,12 @@ const REQUEST_STATUS_COPY: Record<string, string> = {
 export function Account() {
   const { user } = useAuth();
   const { data: profile, loading: profileLoading } = useUserDoc();
-  const { rows: contributions, loading: contribLoading } = useMyContributions();
+  const {
+    rows: contributions,
+    loading: contribLoading,
+    hasMore: moreContributions,
+    loadMore: loadMoreContributions,
+  } = useMyContributions();
   const { rows: requests, loading: reqLoading } = useMyContributorRequests();
   const [searchParams] = useSearchParams();
   // Set by Stripe Checkout's success_url after a completed contribution.
@@ -193,30 +198,43 @@ export function Account() {
             </p>
           </div>
         ) : (
-          <ul className="divide-y divide-charcoal/10">
-            {contributions.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-4 py-3">
-                <div>
-                  <p className="text-base font-semibold capitalize text-charcoal">{c.kind}</p>
-                  <p className="text-sm text-charcoal-soft">{c.method}</p>
-                </div>
-                <div className="text-right">
-                  {c.amountMinor ? (
-                    <p className="text-base text-charcoal">
-                      {formatFiatMinor(c.amountMinor, c.currency)}
-                    </p>
-                  ) : (
-                    c.amountWei && (
+          <>
+            <ul aria-label="Your contributions" className="divide-y divide-charcoal/10">
+              {contributions.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-4 py-3">
+                  <div>
+                    <p className="text-base font-semibold capitalize text-charcoal">{c.kind}</p>
+                    <p className="text-sm text-charcoal-soft">{c.method}</p>
+                  </div>
+                  <div className="text-right">
+                    {c.amountMinor ? (
                       <p className="text-base text-charcoal">
-                        {formatAmount(c.amountWei, c.asset)}
+                        {formatFiatMinor(c.amountMinor, c.currency)}
                       </p>
-                    )
-                  )}
-                  <p className="text-sm text-charcoal-muted">{c.status ?? ""}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+                    ) : (
+                      c.amountWei && (
+                        <p className="text-base text-charcoal">
+                          {formatAmount(c.amountWei, c.asset)}
+                        </p>
+                      )
+                    )}
+                    <p className="text-sm text-charcoal-muted">{c.status ?? ""}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {moreContributions && (
+              <div className="mt-6">
+                <button
+                  type="button"
+                  onClick={loadMoreContributions}
+                  className="btn btn-secondary"
+                >
+                  Show more contributions
+                </button>
+              </div>
+            )}
+          </>
         )}
       </Card>
 

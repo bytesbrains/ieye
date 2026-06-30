@@ -11,7 +11,13 @@
     "typecheck": "tsc -b --noEmit",
     "emulators": "firebase emulators:start --only auth,firestore --project demo-ieye",
     "emulators:seed": "firebase emulators:start --only auth,firestore --project demo-ieye --import ./.emulator-seed --export-on-exit ./.emulator-seed",
-    "grant-admin": "node scripts/grant-admin.mjs"
+    "grant-admin": "node scripts/grant-admin.mjs",
+    "e2e:up": "docker compose -f e2e/docker-compose.yml up -d --wait --build",
+    "e2e:down": "docker compose -f e2e/docker-compose.yml down",
+    "e2e:install": "playwright install chromium",
+    "e2e": "playwright test",
+    "e2e:headed": "E2E_SLOWMO=350 playwright test --headed",
+    "e2e:report": "playwright show-report"
   },
   "dependencies": {
     "firebase": "^11.10.0",
@@ -20,11 +26,14 @@
     "react-router-dom": "^6.30.4"
   },
   "devDependencies": {
-    "firebase-tools": "^15.22.3",
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^6.0.3",
     "autoprefixer": "^10.4.20",
+    "axe-core": "^4.12.1",
+    "firebase-tools": "^15.22.3",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.6.3",

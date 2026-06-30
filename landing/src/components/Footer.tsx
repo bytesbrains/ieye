@@ -64,7 +64,7 @@ export function Footer() {
               iEye is a free, open public good, built on the Maktub Protocol. There is no iEye token
               and no investment offer.
             </p>
-            <p className="text-sm text-charcoal-faint">
+            <p className="text-sm text-charcoal-muted">
               &copy; {new Date().getFullYear()} iEye. A welfare app for people who live alone.
             </p>
           </div>

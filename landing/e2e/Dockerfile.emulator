@@ -1,0 +1,36 @@
+# Firebase Auth + Firestore emulators, containerized for the landing e2e suite
+# (the "firebase local instance in docker"). The Auth emulator is Node (bundled
+# in firebase-tools); the Firestore emulator is a JVM jar, hence the JRE.
+#
+# Functions are intentionally NOT run here: the landing e2e exercises auth +
+# firestore, and the fiat callable depends on Stripe (can't be end-to-end'd). See
+# e2e/README.md. Build context is landing/ so we copy the REAL firestore.rules.
+
+FROM node:22-bookworm-slim
+
+# Firestore emulator is a Java app.
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends default-jre-headless \
+  && rm -rf /var/lib/apt/lists/*
+
+# Pin firebase-tools to the repo's devDependency version for reproducibility.
+RUN npm install -g firebase-tools@13.29.1
+
+WORKDIR /app
+
+# E2E emulator config (binds 0.0.0.0) + the real security rules we want to test.
+COPY e2e/firebase.emulator.json ./firebase.json
+COPY firestore.rules firestore.indexes.json ./
+
+# Bake the Firestore emulator jar into the image so first boot is fast/offline.
+RUN firebase setup:emulators:firestore
+
+EXPOSE 9099 8080
+
+# Readiness = the (slow) Firestore JVM answering on 8080. Auth (9099) is up well
+# before that, so this gates "emulator ready" correctly for `up --wait`.
+HEALTHCHECK --interval=5s --timeout=3s --start-period=45s --retries=30 \
+  CMD node -e "require('http').get('http://127.0.0.1:8080/',r=>process.exit(0)).on('error',()=>process.exit(1))"
+
+# demo- project id => emulators run fully offline, no real credentials.
+CMD ["firebase", "emulators:start", "--only", "auth,firestore", "--project", "demo-ieye"]

@@ -1,0 +1,23 @@
+# Firebase Auth + Firestore emulators for the landing e2e suite.
+# Run from landing/:  npm run e2e:up   (build + start, waits for healthy)
+#                     npm run e2e:down  (stop + remove)
+services:
+  firebase-emulator:
+    build:
+      context: ..
+      dockerfile: e2e/Dockerfile.emulator
+    image: ieye-firebase-emulator:latest
+    container_name: ieye-firebase-emulator
+    ports:
+      - "9099:9099" # Auth emulator (+ its sign-in widget)
+      - "8080:8080" # Firestore emulator
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:8080/',r=>process.exit(0)).on('error',()=>process.exit(1))"
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 45s

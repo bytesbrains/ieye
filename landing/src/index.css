@@ -50,7 +50,9 @@
     min-height: 48px; /* comfortable tap target */
   }
   .btn-primary {
-    @apply bg-amber-deep text-paper hover:bg-amber;
+    /* Dark text on beacon-amber: paper-on-amber-deep was only 2.62:1 (fails AA).
+       charcoal on amber (#e8a33d) is ~6.2:1, keeps the brand amber. */
+    @apply bg-amber text-charcoal hover:bg-amber-warm;
   }
   .btn-secondary {
     @apply border-2 border-charcoal/30 bg-transparent text-charcoal hover:border-charcoal hover:bg-charcoal/5;
@@ -64,7 +66,7 @@
   }
   .field-input {
     @apply w-full rounded-lg border-2 border-charcoal/20 bg-white/60 px-4 py-3 text-base text-charcoal
-      placeholder:text-charcoal-faint focus:border-amber-deep focus:outline-none;
+      placeholder:text-charcoal-muted focus:border-amber-deep focus:outline-none;
     min-height: 48px;
   }
   .field-input[aria-invalid="true"] {
