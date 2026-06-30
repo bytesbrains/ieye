@@ -114,6 +114,59 @@ export async function seedManyPublicSupporters(count: number, prefix = "Supporte
   await batchWrite(writes);
 }
 
+/**
+ * Seed `count` fiat contributions for one owner in a batched write, each with a
+ * distinct timestamp so the account's orderBy(timestamp desc) is deterministic.
+ */
+export async function seedManyContributions(uid: string, count: number): Promise<void> {
+  const writes = Array.from({ length: count }, (_, i) => {
+    const mm = String(i).padStart(2, "0");
+    return {
+      update: {
+        name: `${DB_DOCS}/contributions/seeded-${uid}-${mm}`,
+        fields: toFields({
+          ownerUid: uid,
+          kind: "money",
+          method: "card",
+          amountMinor: String((i + 1) * 100),
+          currency: "SGD",
+          provider: "stripe",
+          isPublic: false,
+          status: "paid",
+          timestamp: { ts: `2026-06-30T12:${mm}:00.000Z` },
+        }).fields,
+      },
+    };
+  });
+  await batchWrite(writes);
+}
+
+/** Seed a contributor request awaiting vetting (admin queue). */
+export function seedContributorRequest(
+  ownerUid: string,
+  opts: { skills?: string } = {}
+): Promise<string> {
+  return seedDoc("contributorRequests", {
+    ownerUid,
+    status: "requested",
+    skills: opts.skills ?? "Flutter, Hindi translation",
+    createdAt: { ts: "2026-06-30T12:00:00.000Z" },
+  });
+}
+
+/** Mint a custom claim on an emulator account (admin-only op via owner bearer). */
+export async function mintCustomClaim(uid: string, claims: Record<string, unknown>): Promise<void> {
+  const res = await fetch(
+    "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/projects/demo-ieye/accounts:update",
+    {
+      method: "POST",
+      headers: OWNER,
+      body: JSON.stringify({ localId: uid, customAttributes: JSON.stringify(claims) }),
+    }
+  );
+  if (!res.ok) throw new Error(`mintCustomClaim failed: ${res.status} ${await res.text()}`);
+}
+
 /** Seed a fiat contribution exactly as the Stripe webhook would on completion. */
 export function seedContribution(
   uid: string,

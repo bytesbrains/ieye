@@ -45,3 +45,9 @@ export async function signInToAccount(page: Page, user: TestUser): Promise<void>
   await page.waitForURL(/\/account/, { timeout: 20_000 });
   await expect(page.getByRole("heading", { name: /your account/i })).toBeVisible();
 }
+
+/** Sign out via the authenticated-app header; lands back on the public home. */
+export async function signOut(page: Page): Promise<void> {
+  await page.getByRole("button", { name: /sign out/i }).click();
+  await page.waitForURL((url) => url.pathname === "/", { timeout: 15_000 });
+}
