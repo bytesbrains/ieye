@@ -140,7 +140,7 @@ export function Roadmap() {
             Where iEye is going
           </p>
           <h2 id="roadmap-heading" className="text-3xl font-semibold sm:text-4xl">
-            More senses. Never more surveillance.
+            More senses. Never less privacy.
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-charcoal-soft">
             Today iEye watches over someone through a single phone — enough to turn weeks into hours,
@@ -153,9 +153,11 @@ export function Roadmap() {
         {/* The ladder — ordered and cumulative (phone → home → wrist → purpose-
             built), on a presence-spine. One calm section fade only (Section);
             no per-card stagger, so prefers-reduced-motion is fully honored. */}
-        <ul role="list" className="relative mt-12 space-y-6">
-          {/* spine */}
+        <div className="relative mt-12">
+          {/* presence-spine behind the cards — decorative, and kept OUTSIDE the
+              <ul> so the list has only <li> children (valid list semantics). */}
           <span aria-hidden="true" className="absolute left-[7px] top-6 bottom-6 w-0.5 bg-charcoal/10" />
+          <ul role="list" className="space-y-6">
           {TIERS.map((tier) => {
             const Glyph = tier.glyph;
             return (
@@ -187,7 +189,8 @@ export function Roadmap() {
               </li>
             );
           })}
-        </ul>
+          </ul>
+        </div>
 
         {/* The invisible layer — learning + rehearsal. A calmer full-width band,
             not a device card (it isn't a sensor). */}

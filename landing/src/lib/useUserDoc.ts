@@ -66,7 +66,8 @@ export async function upsertUserProfile(
     payload.consentVersion = CONSENT_VERSION;
     payload.consentAt = serverTimestamp();
   }
-  // Stamp when funder interest is first registered (mirrors waitlistAt) so we
+  // Stamp the most recent time funder interest was registered (the caller sets
+  // this flag only when turning interest ON; re-opting-in refreshes it) so we
   // know when to reach out once contributions open (#61). Interest only.
   if (opts.stampFunderInterest) {
     payload.funderInterestAt = serverTimestamp();
