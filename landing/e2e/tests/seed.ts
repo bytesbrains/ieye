@@ -41,11 +41,26 @@ export async function seedDoc(collection: string, data: Record<string, Val>): Pr
 
 /** Delete every doc in `collection` (test isolation for the shared emulator). */
 export async function clearCollection(collection: string): Promise<void> {
-  const res = await fetch(`${FS}/${collection}?pageSize=1000`, { headers: OWNER });
-  if (!res.ok) return;
-  const data = (await res.json()) as { documents?: { name: string }[] };
-  const writes = (data.documents ?? []).map((d) => ({ delete: d.name }));
-  await batchWrite(writes);
+  // Page through the whole collection (not just the first page) so cleanup is
+  // complete even past 1000 docs. Collect all names first, then batch-delete —
+  // scoped to THIS collection (a blanket /documents DELETE would wipe every
+  // collection and break cross-collection isolation).
+  const names: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const url =
+      `${FS}/${collection}?pageSize=300` +
+      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : "");
+    const res = await fetch(url, { headers: OWNER });
+    if (!res.ok) return;
+    const data = (await res.json()) as {
+      documents?: { name: string }[];
+      nextPageToken?: string;
+    };
+    for (const d of data.documents ?? []) names.push(d.name);
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+  await batchWrite(names.map((name) => ({ delete: name })));
 }
 
 /** REST batchWrite (owner bypass), chunked to stay under the 500-op limit. */

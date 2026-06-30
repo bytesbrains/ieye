@@ -32,8 +32,12 @@ export async function completeEmulatorGoogleSignIn(page: Page, user: TestUser): 
   await page.locator("#display-name-input").fill(user.name);
   await page.locator("#sign-in").click();
 
-  // Back on the app (any origin that isn't the auth emulator).
-  await page.waitForURL((url) => !url.host.includes("9099"), { timeout: 20_000 });
+  // Back on the app itself (127.0.0.1 on a dev-server port — NOT the :9099 auth
+  // emulator). Narrower than "any non-9099 URL" so a transient redirect origin
+  // can't resolve this early; callers then wait for the specific app state.
+  await page.waitForURL((url) => url.hostname === "127.0.0.1" && url.port !== "9099", {
+    timeout: 20_000,
+  });
 }
 
 /** Sign in through the /signin page and land on /account. */

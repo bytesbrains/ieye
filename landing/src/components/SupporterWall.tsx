@@ -50,8 +50,13 @@ export function SupporterWall() {
 
   async function handleShowMore() {
     setLoadingMore(true);
-    await loadNextPage();
-    setLoadingMore(false);
+    try {
+      await loadNextPage();
+    } finally {
+      // Always re-enable, even if a future loadNextPage starts throwing —
+      // otherwise the button could stick disabled.
+      setLoadingMore(false);
+    }
   }
 
   const named = (supporters ?? []).filter((s) => (s.displayName ?? "").trim() !== "");
