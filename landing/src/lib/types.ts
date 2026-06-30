@@ -21,6 +21,14 @@ export interface UserDoc {
   /** Opted in to the launch waitlist from the public landing (#42). */
   waitlistOptIn?: boolean;
   waitlistAt?: Timestamp;
+  /**
+   * Registered INTEREST in helping fund/sponsor iEye, from the landing
+   * "why this needs support" path (#61). Interest only — never a payment, a
+   * pledge, or an amount. Live money flows stay blocked on Legal (#39); this
+   * bit only lets us reach out the moment contributions open.
+   */
+  funderInterestOptIn?: boolean;
+  funderInterestAt?: Timestamp;
 }
 
 export type ContributionKind = "money" | "inkind" | "labor";

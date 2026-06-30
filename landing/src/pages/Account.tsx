@@ -20,6 +20,7 @@ import {
   useMyContributorRequests,
 } from "../lib/useContributorRequest";
 import { formatAmount } from "../lib/format";
+import { LEGAL } from "../lib/legalCopy";
 
 function Card({
   title,
@@ -210,6 +211,43 @@ export function Account() {
         ) : (
           <ContributorRequestForm uid={user.uid} />
         )}
+      </Card>
+
+      {/* ---- Funder / sponsor interest (#61) ---- */}
+      {/* Interest capture ONLY — no payment, no amount, no pledge. Money flows
+          remain blocked on Legal (#39). This just records the bit "tell me when
+          it opens" on the user's own doc (mirrors waitlistOptIn). */}
+      <Card title="Help fund iEye">
+        <p className="max-w-prose text-base text-charcoal-soft">
+          Making the sign of life dependable costs real money — sensors, the learning, and the
+          harness that rehearses emergencies so we never test them on a real person. We can&rsquo;t
+          take contributions live just yet, so we&rsquo;re gathering the people and partners who want
+          to help fund it.
+        </p>
+        <div className="mt-4">
+          <OptInToggle
+            id="funderInterestOptIn"
+            label="Register my interest in helping fund iEye"
+            description="Be the first to know the moment contributions open. We'll only use this to tell you when it's live."
+            checked={profile?.funderInterestOptIn === true}
+            disabled={profileLoading}
+            onChange={async (next) => {
+              await upsertUserProfile(
+                user.uid,
+                { funderInterestOptIn: next },
+                next ? { stampFunderInterest: true } : {}
+              );
+            }}
+          />
+        </div>
+        {/* Legal-weight reassurance + disclaimer come from lib/legalCopy (single
+            source of truth), never paraphrased here. */}
+        <p className="mt-2 max-w-prose text-sm text-charcoal-soft">
+          {LEGAL.funderInterestReassurance}
+        </p>
+        <p className="mt-3 max-w-prose text-sm text-charcoal-muted">
+          {LEGAL.contributionDisclaimerShort}
+        </p>
       </Card>
     </AppLayout>
   );

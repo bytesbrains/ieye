@@ -3,6 +3,7 @@ import { Hero } from "./components/Hero";
 import { Gap } from "./components/Gap";
 import { HowItWorks } from "./components/HowItWorks";
 import { Trust } from "./components/Trust";
+import { Roadmap } from "./components/Roadmap";
 import { Contribute } from "./components/Contribute";
 import { SupporterWall } from "./components/SupporterWall";
 import { Footer } from "./components/Footer";
@@ -25,6 +26,7 @@ export default function App() {
         <Gap />
         <HowItWorks />
         <Trust />
+        <Roadmap />
         <Contribute />
         <SupporterWall />
       </main>

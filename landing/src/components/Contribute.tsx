@@ -63,19 +63,31 @@ export function Contribute() {
           </div>
         </div>
 
-        {/* Money: coming soon, explicitly no live payment yet. */}
+        {/* Money: funder/sponsor INTEREST capture — no live payment, no amount,
+            no crypto address (all blocked on Legal #39). We express "we need
+            funds" by gathering the people who want to help, not by taking money.
+            CTA is intentionally calm (btn-secondary), never a loud "donate". */}
         <div className="container-prose mt-10 rounded-2xl border-2 border-dashed border-charcoal/20 bg-paper px-6 py-7 text-center">
           <p className="text-sm font-semibold uppercase tracking-wide text-charcoal-muted">
-            Coming soon
+            Why this needs support
           </p>
-          <p className="mt-2 text-lg font-semibold text-charcoal">
-            Contributing money isn&rsquo;t open yet.
-          </p>
+          <p className="mt-2 text-lg font-semibold text-charcoal">Help us build the senses.</p>
           <p className="mx-auto mt-2 max-w-prose text-base text-charcoal-soft">
-            When it opens, you&rsquo;ll be able to <strong>contribute</strong> by card, bank, or
-            crypto — every contribution shown on a public ledger you can check yourself. Until then,
-            the most valuable thing you can give is your skills or a heads-up that you&rsquo;re
-            interested.
+            iEye is free and open, and always will be — but making the sign of life dependable costs
+            real money: the sensors, the learning, and the harness that rehearses emergencies so we
+            never test them on a real person. We can&rsquo;t take contributions live just yet, so
+            we&rsquo;re starting by gathering the people and partners who want to help fund this.
+            Register your interest, and you&rsquo;ll be the first to know the moment it opens.
+          </p>
+          <div className="mt-6">
+            <Link to="/account" className="btn btn-secondary">
+              Register funder interest
+            </Link>
+          </div>
+          {/* Same honest "coming soon" promise as before — money isn't open yet. */}
+          <p className="mx-auto mt-4 max-w-prose text-sm text-charcoal-soft">
+            Contributing money isn&rsquo;t open yet. When it opens, you&rsquo;ll be able to help by
+            card, bank, or crypto — every contribution on a public ledger you can check yourself.
           </p>
           {/* Canonical contribution disclaimer — single source of truth (lib/legalCopy). */}
           <p className="mx-auto mt-4 max-w-prose text-sm text-charcoal-muted">
