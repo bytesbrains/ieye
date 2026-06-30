@@ -6,7 +6,8 @@
 // it reflects in the UI" deterministically.
 
 const PROJECT = "demo-ieye";
-const FS = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`;
+const DB_DOCS = `projects/${PROJECT}/databases/(default)/documents`;
+const FS = `http://127.0.0.1:8080/v1/${DB_DOCS}`;
 const OWNER = { Authorization: "Bearer owner", "Content-Type": "application/json" };
 
 type Val = string | number | boolean | { ts: string };
@@ -40,11 +41,22 @@ export async function seedDoc(collection: string, data: Record<string, Val>): Pr
 
 /** Delete every doc in `collection` (test isolation for the shared emulator). */
 export async function clearCollection(collection: string): Promise<void> {
-  const res = await fetch(`${FS}/${collection}?pageSize=300`, { headers: OWNER });
+  const res = await fetch(`${FS}/${collection}?pageSize=1000`, { headers: OWNER });
   if (!res.ok) return;
   const data = (await res.json()) as { documents?: { name: string }[] };
-  for (const d of data.documents ?? []) {
-    await fetch(`http://127.0.0.1:8080/v1/${d.name}`, { method: "DELETE", headers: OWNER });
+  const writes = (data.documents ?? []).map((d) => ({ delete: d.name }));
+  await batchWrite(writes);
+}
+
+/** REST batchWrite (owner bypass), chunked to stay under the 500-op limit. */
+async function batchWrite(writes: unknown[]): Promise<void> {
+  for (let i = 0; i < writes.length; i += 400) {
+    const res = await fetch(`${FS}:batchWrite`, {
+      method: "POST",
+      headers: OWNER,
+      body: JSON.stringify({ writes: writes.slice(i, i + 400) }),
+    });
+    if (!res.ok) throw new Error(`batchWrite failed: ${res.status} ${await res.text()}`);
   }
 }
 
@@ -81,6 +93,25 @@ export function seedPublicSupporter(displayName: string): Promise<string> {
     displayName,
     publishedAt: { ts: "2026-06-30T12:00:00.000Z" },
   });
+}
+
+/**
+ * Seed `count` supporters in one batched write. Zero-padded names ("Supporter
+ * 0001"…) so alphabetical order (the wall's orderBy) matches numeric order,
+ * making pagination assertions deterministic.
+ */
+export async function seedManyPublicSupporters(count: number, prefix = "Supporter"): Promise<void> {
+  const writes = Array.from({ length: count }, (_, i) => {
+    const n = String(i + 1).padStart(4, "0");
+    return {
+      update: {
+        name: `${DB_DOCS}/publicSupporters/seeded-${n}`,
+        fields: toFields({ displayName: `${prefix} ${n}`, publishedAt: { ts: "2026-06-30T12:00:00.000Z" } })
+          .fields,
+      },
+    };
+  });
+  await batchWrite(writes);
 }
 
 /** Seed a fiat contribution exactly as the Stripe webhook would on completion. */

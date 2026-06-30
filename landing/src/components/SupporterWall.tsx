@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Section } from "./Section";
 import type { PublicSupporterDoc, WithId } from "../lib/types";
 
@@ -7,31 +7,52 @@ import type { PublicSupporterDoc, WithId } from "../lib/types";
 // enters the main landing bundle (a first-time visitor downloads none of it).
 //
 // Flat wall (#36, Version B): name-only, equal weight, no amounts, no size-sort.
-// Naming is opt-in and private by default — a name is here only because its owner
-// asked, and the backend projects ONLY consented names into publicSupporters, so
-// the wall is structurally incapable of showing anyone who didn't opt in (or any
-// amount). Empty -> the honest "coming soon" placeholder.
+// We render ONLY displayName — the projection carries nothing private (no email,
+// no uid, no amount), and we never reach for any other field, so the wall cannot
+// leak who gave or how much even if a row somehow carried extra data.
+//
+// PAGINATED in both dimensions: the query is bounded by PAGE_SIZE and walked with
+// a cursor (lib/publicSupporters), and the view loads a page at a time via "Show
+// more" — so hundreds/thousands of supporters never blow up the read or the DOM.
+// Empty -> the honest "coming soon" placeholder.
+
+const PAGE_SIZE = 60;
 
 export function SupporterWall() {
-  // null = still loading; [] = loaded, none yet.
+  // null = still loading the first page; [] = loaded, none yet.
   const [supporters, setSupporters] = useState<WithId<PublicSupporterDoc>[] | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const cursorRef = useRef<unknown>(undefined);
+  const seenIds = useRef<Set<string>>(new Set());
+
+  async function loadNextPage(): Promise<void> {
+    try {
+      const { fetchPublicSupporters } = await import("../lib/publicSupporters");
+      const page = await fetchPublicSupporters(PAGE_SIZE, cursorRef.current);
+      cursorRef.current = page.cursor ?? cursorRef.current;
+      setHasMore(page.hasMore);
+      // De-dupe defensively so a cursor edge can never double-render a name.
+      const fresh = page.rows.filter((r) => !seenIds.current.has(r.id));
+      fresh.forEach((r) => seenIds.current.add(r.id));
+      setSupporters((prev) => [...(prev ?? []), ...fresh]);
+    } catch {
+      // Fail soft to the placeholder — the wall must never hard-error the page.
+      setSupporters((prev) => prev ?? []);
+      setHasMore(false);
+    }
+  }
 
   useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const { fetchPublicSupporters } = await import("../lib/publicSupporters");
-        const rows = await fetchPublicSupporters();
-        if (!cancelled) setSupporters(rows);
-      } catch {
-        // Fail soft to the placeholder — the wall must never hard-error the page.
-        if (!cancelled) setSupporters([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    void loadNextPage();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function handleShowMore() {
+    setLoadingMore(true);
+    await loadNextPage();
+    setLoadingMore(false);
+  }
 
   const named = (supporters ?? []).filter((s) => (s.displayName ?? "").trim() !== "");
   const hasSupporters = named.length > 0;
@@ -52,20 +73,34 @@ export function SupporterWall() {
         </p>
 
         {hasSupporters ? (
-          <ul
-            role="list"
-            aria-label="Supporters"
-            className="mt-10 flex flex-wrap justify-center gap-3"
-          >
-            {named.map((s) => (
-              <li
-                key={s.id}
-                className="rounded-xl border-2 border-charcoal/10 bg-paper px-4 py-2 text-base font-medium text-charcoal"
-              >
-                {s.displayName}
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul
+              role="list"
+              aria-label="Supporters"
+              className="mt-10 flex flex-wrap justify-center gap-3"
+            >
+              {named.map((s) => (
+                <li
+                  key={s.id}
+                  className="rounded-xl border-2 border-charcoal/10 bg-paper px-4 py-2 text-base font-medium text-charcoal"
+                >
+                  {s.displayName}
+                </li>
+              ))}
+            </ul>
+            {hasMore && (
+              <div className="mt-8">
+                <button
+                  type="button"
+                  onClick={handleShowMore}
+                  disabled={loadingMore}
+                  className="btn btn-secondary disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {loadingMore ? "Loading…" : "Show more supporters"}
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           // Placeholder — no live supporters yet.
           <div className="mt-10 rounded-2xl border-2 border-dashed border-charcoal/20 bg-paper p-8">
