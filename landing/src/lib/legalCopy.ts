@@ -46,4 +46,16 @@ export const LEGAL = {
     "anyone. This is the opposite of the fiat path. If you want your contribution to stay " +
     "private, use the card/bank option instead. By sending on-chain, you accept that your " +
     "contribution is permanently public.",
+
+  /**
+   * Funder/sponsor INTEREST reassurance (#61). Shown next to the
+   * register-funder-interest control. Legal-weight ("not a pledge / not a
+   * payment") — lives here, not hardcoded in a component, so Legal owns the
+   * exact words via CODEOWNERS. Phase-1 interest capture only; money flows
+   * remain blocked on #39.
+   */
+  funderInterestReassurance:
+    "Registering your interest is not a payment or a pledge — nothing is charged and you are not " +
+    "committing to give. It only lets us tell you the moment contributions open, so you can decide " +
+    "then. You can withdraw your interest at any time.",
 } as const;

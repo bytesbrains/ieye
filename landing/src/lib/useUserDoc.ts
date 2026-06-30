@@ -58,13 +58,19 @@ export function useUserDoc() {
 export async function upsertUserProfile(
   uid: string,
   patch: Partial<UserDoc>,
-  opts: { recordConsent?: boolean } = {}
+  opts: { recordConsent?: boolean; stampFunderInterest?: boolean } = {}
 ): Promise<void> {
   const ref = doc(db, "users", uid);
   const payload: Record<string, unknown> = { ...patch };
   if (opts.recordConsent) {
     payload.consentVersion = CONSENT_VERSION;
     payload.consentAt = serverTimestamp();
+  }
+  // Stamp the most recent time funder interest was registered (the caller sets
+  // this flag only when turning interest ON; re-opting-in refreshes it) so we
+  // know when to reach out once contributions open (#61). Interest only.
+  if (opts.stampFunderInterest) {
+    payload.funderInterestAt = serverTimestamp();
   }
   await setDoc(ref, payload, { merge: true });
 }
