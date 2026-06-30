@@ -47,19 +47,29 @@ npm run e2e:down        # stop the emulator
 - **`account.spec.ts`** — signed-in flows: profile seeded from Google, opt-in-to-
   be-named, funder-interest, contributor request (writes to Firestore under the
   real rules).
+- **`wall.spec.ts`** — the live supporter wall (`#transparency`): empty → "coming
+  soon"; seeded opt-in supporters appear by name, and never with an amount.
+- **`contribution-reflection.spec.ts`** — seeds the exact `contributions` row the
+  Stripe webhook writes and asserts it reflects **live** in the account's "Your
+  contributions" (the real Firestore path; we pick up where Stripe hands back).
 - **`fiat.spec.ts`** (project `fiat`, flag ON) — the money panel flips to
   "contribute by card", and `/account` shows the amount picker + the full
   point-of-payment disclaimer.
 
+`tests/seed.ts` writes `contributions` / `publicSupporters` rows via the Firestore
+emulator's `Authorization: Bearer owner` rule-bypass — the same docs the trusted
+backend (webhook / consent projection) would, so we can verify reflection without
+a functions emulator.
+
 ## Known notes
 
-- **Redirect-auth retries.** `waitlist.spec.ts` is configured with `retries: 2`.
-  Unlike `/account` (backed by a persistent `onIdTokenChanged` listener), the
-  public waitlist completes via `getRedirectResult` alone, which has a
-  load-dependent race with `signInWithRedirect`'s persistence flush on a cold dev
-  server. Re-running the round-trip is the standard, honest de-flake for
-  redirect/OAuth e2e. `vite.config.ts` also warms the Firebase modules to reduce
-  it. No production impact — prod ships a pre-bundled build.
+- **Waitlist redirect race (fixed in the app).** This suite surfaced a real
+  reliability bug: the public waitlist completed via `getRedirectResult` alone,
+  which races to `null` on a cold load even though the redirect signed the user
+  in — silently dropping the waitlist write. `lib/waitlist.ts` now falls back to
+  the resolved auth state (the backstop the `/account` flow already had via
+  `onIdTokenChanged`). `waitlist.spec.ts` keeps `retries: 1` as ordinary
+  belt-and-suspenders for a redirect round-trip.
 - **Out of scope: Cloud Functions / Stripe.** The emulator runs Auth + Firestore
   only. The fiat path's Stripe checkout is an external redirect and isn't
   end-to-end-able here; the `fiat` project verifies the UI gating up to the point

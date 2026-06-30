@@ -17,11 +17,35 @@
 // redirect unloads the page, the flow is split: begin() before we navigate away,
 // complete() on return.
 
-import { getRedirectResult, signInWithRedirect } from "firebase/auth";
+import { getRedirectResult, onAuthStateChanged, signInWithRedirect, type User } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "./firebase";
 import { CONSENT_VERSION } from "./useUserDoc";
 import { clearWaitlistPending, markWaitlistPending } from "./waitlistPending";
+
+/**
+ * Resolve the signed-in user, waiting briefly for auth state to settle. The
+ * landing page has no persistent auth listener (unlike the /account flow's
+ * onIdTokenChanged), so when getRedirectResult races to null on a cold load —
+ * even though the redirect DID sign the user in — we'd otherwise drop the
+ * waitlist write. This backstop recovers it.
+ */
+function waitForSignedInUser(timeoutMs = 6000): Promise<User | null> {
+  if (auth.currentUser) return Promise.resolve(auth.currentUser);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      unsub();
+      resolve(auth.currentUser ?? null);
+    }, timeoutMs);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        clearTimeout(timer);
+        unsub();
+        resolve(u);
+      }
+    });
+  });
+}
 
 export interface WaitlistResult {
   displayName: string;
@@ -60,9 +84,12 @@ export async function completePendingWaitlist(): Promise<WaitlistResult | null> 
     // The attempt is over either way — clear so a reload doesn't loop.
     clearWaitlistPending();
   }
-  if (!result?.user) return null;
 
-  const user = result.user;
+  // Prefer the redirect result; fall back to the resolved auth state when
+  // getRedirectResult races to null (the redirect still signed the user in).
+  const user = result?.user ?? (await waitForSignedInUser());
+  if (!user) return null;
+
   const ref = doc(db, "users", user.uid);
   await setDoc(
     ref,
