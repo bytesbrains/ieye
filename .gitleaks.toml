@@ -14,6 +14,19 @@ title = "iEye gitleaks config"
 useDefault = true
 
 # ---------------------------------------------------------------------------
+# Custom rules — domain-specific secrets the default set doesn't reliably catch.
+# ---------------------------------------------------------------------------
+
+# Credentials embedded in a URL, e.g. rtsp://admin:hunter2@192.168.0.148 — the
+# exact shape a camera/RTSP audit produces. Requires a non-empty password between
+# ':' and '@', so a plain rtsp://host:554/path (no creds) does NOT match.
+[[rules]]
+id = "inline-url-credentials"
+description = "Credentials embedded in a URL (scheme://user:pass@host)"
+regex = '''(?i)\b(?:rtsp|rtsps|https?|ftp)://[^\s/:@]+:[^\s/@]+@'''
+tags = ["credentials", "url"]
+
+# ---------------------------------------------------------------------------
 # Allowlist — keep this TIGHT. Every entry here is a place gitleaks will stop
 # looking, so it can hide a real secret. Add only proven, low-risk noise, and
 # prefer a narrow regexTarget/path over a broad one. Use a `gitleaks:allow`

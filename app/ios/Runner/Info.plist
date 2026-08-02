@@ -4,6 +4,11 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<!-- Home Security Scan: iOS 14+ shows the Local Network prompt on first LAN
+	     access. This string is what the user reads in that prompt. Honest + on-brand:
+	     we look, we never sign in, nothing leaves the phone. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>iEye looks at the devices on your Wi-Fi to find cameras or gadgets a stranger could reach. It never signs in to anything, and nothing it finds leaves your phone.</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

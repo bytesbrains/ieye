@@ -56,6 +56,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     onResume: widget.brain.resume,
                   ),
                   const SizedBox(height: 32),
+                  // Day-one value: a home-network security scan (finds exposed
+                  // cameras/IoT). Same guardian-eye promise, pointed at a threat
+                  // the user can feel today — not a competing primary action, so
+                  // it reads as a calm entry, not another amber CTA.
+                  const _SecurityScanEntry(),
+                  const SizedBox(height: 32),
                   Text(
                     'iEye watches over you, never watches you. It reads a sign of '
                     'life only — nothing about your day leaves this phone. It is not '
@@ -258,6 +264,56 @@ class _HonestNote extends StatelessWidget {
           color: IEyeColors.charcoal,
           fontSize: 15,
           height: 1.45,
+        ),
+      ),
+    );
+  }
+}
+
+/// The home-screen entry to the Home Security Scan (day-one value). A calm,
+/// tappable card — not an amber CTA — so it never competes with the welfare
+/// status above it. Copy stays on-brand: protect you FROM being watched.
+class _SecurityScanEntry extends StatelessWidget {
+  const _SecurityScanEntry();
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Semantics(
+      button: true,
+      child: Material(
+        color: IEyeColors.paperDim,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => Navigator.of(context).pushNamed('/security-scan'),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                const Icon(Icons.wifi_find_outlined,
+                    color: IEyeColors.tealDeep, size: 26),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Home security scan',
+                          style: text.titleLarge?.copyWith(fontSize: 17)),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Find cameras or gadgets a stranger could reach.',
+                        style: text.bodyMedium?.copyWith(
+                            fontSize: 14, color: IEyeColors.charcoalSoft),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right,
+                    color: IEyeColors.charcoalMuted),
+              ],
+            ),
+          ),
         ),
       ),
     );
