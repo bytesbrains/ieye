@@ -14,9 +14,9 @@ class ScanReport {
   final WifiReport? wifi;
 
   Iterable<Finding> get _allFindings => [
-        ...devices.expand((d) => d.findings),
-        ...?wifi?.findings,
-      ];
+    ...devices.expand((d) => d.findings),
+    ...?wifi?.findings,
+  ];
 
   int get deviceCount => devices.length;
 
@@ -34,6 +34,29 @@ class ScanReport {
   int get criticalCount =>
       _allFindings.where((f) => f.severity == Severity.critical).length;
 
+  /// Devices carrying at least one CRITICAL finding. The headline counts
+  /// DEVICES ("N devices may be reachable…"), and one camera can emit several
+  /// critical findings — so it must not count findings ([criticalCount]).
+  int get criticalDeviceCount => devices
+      .where((d) => d.findings.any((f) => f.severity == Severity.critical))
+      .length;
+
+  /// Devices with at least one finding above INFO — the "Need a look" number.
+  /// Info findings are identification ("a printer is here"), not a call to
+  /// action; counting them would put every normal smart home on alert
+  /// (alarm-fatigue guardrail).
+  int get attentionCount => devices
+      .where(
+        (d) => d.findings.any((f) => f.severity.index < Severity.info.index),
+      )
+      .length;
+
+  /// True when the scan surfaced no finding above INFO — the "nothing found ≠
+  /// safe" state. Info notes may still be present; they identify devices, they
+  /// don't assert exposure.
+  bool get nothingAboveInfo =>
+      _allFindings.every((f) => f.severity == Severity.info);
+
   bool get anyFindings => findingCount > 0;
 
   /// The single worst severity across the whole scan (null if nothing found).
@@ -43,6 +66,15 @@ class ScanReport {
       if (w == null || f.severity.index < w.index) w = f.severity;
     }
     return w;
+  }
+
+  /// Findings grouped by severity — powers the exposure-by-severity overview chart.
+  Map<Severity, int> get severityCounts {
+    final counts = <Severity, int>{};
+    for (final f in _allFindings) {
+      counts[f.severity] = (counts[f.severity] ?? 0) + 1;
+    }
+    return counts;
   }
 }
 
@@ -85,13 +117,17 @@ class StubScanner implements NetworkScanner {
     return ScanReport(
       startedAt: DateTime.now(),
       devices: devices,
-      wifi: WifiReport(observation: wifiObs, findings: engine.assessWifi(wifiObs)),
+      wifi: WifiReport(
+        observation: wifiObs,
+        findings: engine.assessWifi(wifiObs),
+      ),
     );
   }
 
   /// Representative demo devices: four XiongMai cameras (cloud/P2P on), two units
-  /// hidden behind nginx, a TP-Link router, and one quiet host. Private RFC1918
-  /// addresses and public product strings only — no serials, no credentials.
+  /// hidden behind nginx, a DVR holding stored footage, a TP-Link router, and one
+  /// quiet host. Private RFC1918 addresses and public product strings only — no
+  /// serials, no credentials.
   static const List<DeviceObservation> _demoObservations = [
     DeviceObservation(
       ip: '192.168.0.148',
@@ -125,6 +161,56 @@ class StubScanner implements NetworkScanner {
       httpServerBanner: 'nginx',
       rtspMediaMagic: '494D4B48',
     ),
+    // A network video recorder — the box that stores the footage. Dahua-style
+    // DVRIP (37777) + a DVR web UI, restreaming over RTSP.
+    DeviceObservation(
+      ip: '192.168.0.201',
+      openPorts: {80, 554, 37777},
+      httpServerBanner: 'DVR-Webs',
+    ),
+    // A NAS holding the household's files — Synology DSM (5000/5001) + SMB, and
+    // it announces itself over mDNS so the report can show its real name.
+    DeviceObservation(
+      ip: '192.168.0.20',
+      openPorts: {80, 443, 445, 5000, 5001},
+      httpServerBanner: 'Synology DiskStation',
+      mdnsName: 'DiskStation',
+      mdnsServices: {'_smb._tcp', '_afpovertcp._tcp'},
+    ),
+    // A network printer — raw print (9100) + JetDirect web UI; named via mDNS.
+    DeviceObservation(
+      ip: '192.168.0.30',
+      openPorts: {80, 161, 9100},
+      httpServerBanner: 'HP JetDirect',
+      mdnsName: 'HP OfficeJet Pro',
+      mdnsServices: {'_ipp._tcp', '_printer._tcp'},
+    ),
+    // A cheap Android TV box with the ADB debug bridge (5555) left wide open;
+    // mDNS gives it a friendly name.
+    DeviceObservation(
+      ip: '192.168.0.40',
+      openPorts: {8009, 5555},
+      mdnsName: 'Living Room TV',
+      mdnsServices: {'_googlecast._tcp'},
+    ),
+    // A smart-home hub (Home Assistant) that controls the house.
+    DeviceObservation(
+      ip: '192.168.0.50',
+      openPorts: {8123},
+      httpServerBanner: 'Home Assistant',
+      mdnsName: 'Home Assistant',
+      mdnsServices: {'_home-assistant._tcp'},
+    ),
+    // A speaker that answers NO scan port — found and classified only because it
+    // broadcasts its name + service over mDNS (the whole point of adding mDNS).
+    DeviceObservation(
+      ip: '192.168.0.55',
+      openPorts: {},
+      mdnsName: 'Kitchen Speaker',
+      mdnsServices: {'_googlecast._tcp'},
+    ),
+    // A little home server left wide open — plaintext Telnet + a no-auth database.
+    DeviceObservation(ip: '192.168.0.70', openPorts: {23, 6379}),
     DeviceObservation(
       ip: '192.168.0.1',
       openPorts: {80},

@@ -35,6 +35,13 @@ class _FakeWifi implements WifiSource {
   Future<WifiObservation> current() async => observation;
 }
 
+class _FakeMdns implements MdnsSource {
+  const _FakeMdns(this.records);
+  final Map<String, MdnsRecord> records;
+  @override
+  Future<Map<String, MdnsRecord>> discover() async => records;
+}
+
 void main() {
   DateTime clock() => DateTime.utc(2026, 8, 2);
 
@@ -74,6 +81,48 @@ void main() {
     // Still passive: nothing was verified by touching a device.
     expect(report.devices.expand((d) => d.findings).every((f) => !f.verified),
         isTrue);
+  });
+
+  test('mDNS names port-found hosts and adds name-only devices the sweep missed',
+      () async {
+    final probe = _FakeProbe(
+      {
+        '192.168.0.20': {80, 445, 5000}, // a NAS that answered the port sweep
+      },
+      const {},
+      const {},
+    );
+    final scanner = LanScanner(
+      probe: probe,
+      subnet: const _FakeSubnet('192.168.0'),
+      mdns: const _FakeMdns({
+        // Names the host the sweep found…
+        '192.168.0.20': MdnsRecord(
+          name: 'DiskStation',
+          services: {'_smb._tcp'},
+        ),
+        // …and surfaces a speaker that answered NO scan port at all.
+        '192.168.0.55': MdnsRecord(
+          name: 'Kitchen Speaker',
+          services: {'_googlecast._tcp'},
+        ),
+      }),
+      now: clock,
+    );
+
+    final report = await scanner.scan();
+
+    // The port-silent, mDNS-only device still made it into the inventory.
+    expect(report.deviceCount, 2);
+
+    final nas = report.devices.firstWhere((d) => d.ip == '192.168.0.20');
+    expect(nas.deviceClass, DeviceClass.nas);
+    expect(nas.observation.mdnsName, 'DiskStation');
+
+    final speaker = report.devices.firstWhere((d) => d.ip == '192.168.0.55');
+    expect(speaker.observation.openPorts, isEmpty);
+    expect(speaker.deviceClass, DeviceClass.mediaDevice); // classified by mDNS
+    expect(speaker.observation.mdnsName, 'Kitchen Speaker');
   });
 
   test('no private LAN address → an empty report, not a false all-clear',

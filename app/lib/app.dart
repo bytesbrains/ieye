@@ -5,6 +5,7 @@ import 'core/circle.dart';
 import 'core/delivery_mode.dart';
 import 'core/detection_brain.dart';
 import 'core/homescan/lan_scanner.dart';
+import 'core/homescan/scanner.dart';
 import 'features/homescan/platform_wifi_source.dart';
 import 'core/rhythm.dart';
 import 'core/trigger_sink.dart';
@@ -20,7 +21,11 @@ import 'theme/ieye_theme.dart';
 /// product-spine routes. No trigger sink is fired anywhere yet — the prototype
 /// signs nothing and sends nothing off-device.
 class IEyeApp extends StatefulWidget {
-  const IEyeApp({super.key});
+  const IEyeApp({super.key, this.scanner});
+
+  /// Overrides the security-scan engine — E2E/previews inject a [StubScanner] for
+  /// a deterministic scan; production falls back to the real dart:io [LanScanner].
+  final NetworkScanner? scanner;
 
   @override
   State<IEyeApp> createState() => _IEyeAppState();
@@ -77,7 +82,16 @@ class _IEyeAppState extends State<IEyeApp> {
         // user's own network). Uses the real dart:io LAN scanner; the screen's
         // own default is the StubScanner (demo data) for previews/tests.
         '/security-scan': (_) => SecurityScanScreen(
-              scanner: LanScanner(wifi: const PlatformWifiSource()),
+              scanner: widget.scanner ??
+                  LanScanner(wifi: const PlatformWifiSource()),
+            ),
+        // Same engine, pointed at the car's Wi-Fi hotspot — finds exposed
+        // aftermarket gadgets (dashcams, OBD dongles). The screen draws the
+        // honest-scope banner: Wi-Fi, never the car's driving systems.
+        '/car-scan': (_) => SecurityScanScreen(
+              scanContext: ScanContext.car,
+              scanner: widget.scanner ??
+                  LanScanner(wifi: const PlatformWifiSource()),
             ),
         // Checkers arrive here from an invite link (#17). Demo invite until real
         // invites are wired; the handshake itself is fully functional.

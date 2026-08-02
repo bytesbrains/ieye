@@ -24,6 +24,7 @@ class LanScanner implements NetworkScanner {
     HostProbe? probe,
     SubnetSource? subnet,
     WifiSource? wifi,
+    MdnsSource? mdns,
     this.engine = const FingerprintEngine(),
     this.discoveryPorts = defaultDiscoveryPorts,
     this.maxConcurrent = 48,
@@ -31,22 +32,36 @@ class LanScanner implements NetworkScanner {
   })  : _probe = probe ?? const SocketHostProbe(),
         _subnet = subnet ?? const InterfaceSubnetSource(),
         _wifi = wifi ?? const UnsupportedWifiSource(),
+        _mdns = mdns ?? const NoMdnsSource(),
         _now = now;
 
   final HostProbe _probe;
   final SubnetSource _subnet;
   final WifiSource _wifi;
+  final MdnsSource _mdns;
   final FingerprintEngine engine;
 
-  /// The small set of ports whose presence tells us a host is worth a closer look
-  /// — camera/DVR ports first (the XM Sofia pair, RTSP, web), then a few common
-  /// admin ports. Kept short so a full /24 sweep stays quick.
+  /// The ports whose presence tells us a host is worth a closer look. This list
+  /// must cover every port the [FingerprintEngine]'s rules key off — a rule whose
+  /// port is never swept can never fire (review #81 §1). Cost: [SocketHostProbe]
+  /// probes one host's ports concurrently under a ~400ms connect timeout, so a
+  /// longer list widens each host's probe fan-out, not the sweep's wall-clock
+  /// (still ≈ 254 hosts / [maxConcurrent] × timeout).
   final List<int> discoveryPorts;
   final int maxConcurrent;
   final DateTime Function() _now;
 
   static const List<int> defaultDiscoveryPorts = [
-    80, 443, 554, 8000, 8080, 8899, 34567, 37777, 23, 22,
+    // Camera/recorder tells — the flagship findings (XM Sofia pair, RTSP,
+    // web UIs, Dahua DVRIP).
+    80, 443, 554, 8000, 8080, 8899, 34567, 37777,
+    // Cross-cutting killers: remote login + the open Android debug bridge.
+    22, 23, 5555,
+    // NAS (SMB + Synology DSM), printer (IPP, JetDirect), TV/streaming
+    // (Chromecast, Roku), smart-home hub (Home Assistant).
+    445, 5000, 5001, 631, 9100, 8008, 8009, 8060, 8123,
+    // Databases that should never face the LAN unauthenticated.
+    6379, 27017, 3306, 5432, 9200,
   ];
 
   @override
@@ -66,21 +81,31 @@ class LanScanner implements NetworkScanner {
       if (ports.isNotEmpty) alive[ip] = ports;
     });
 
-    // Phase 2 — fingerprint: grab a banner only from hosts that answered, then
-    // classify with the shared engine. Bounded too (banner reads block on I/O).
+    // mDNS/Bonjour: devices broadcast a friendly name + what they are. Passive
+    // (we listen to multicast, we don't touch a host). It also surfaces devices
+    // that answer no TCP port, so union its IPs into the inventory.
+    final names = await _mdns.discover();
+    final allIps = {...alive.keys, ...names.keys};
+
+    // Phase 2 — fingerprint: grab a banner only from hosts that answered a port,
+    // fold in the mDNS name/services, then classify with the shared engine.
+    // Bounded too (banner reads block on I/O).
     final reports = <DeviceReport>[];
-    await _forEachBounded(alive.keys, maxConcurrent, (ip) async {
-      final ports = alive[ip]!;
+    await _forEachBounded(allIps, maxConcurrent, (ip) async {
+      final ports = alive[ip] ?? const <int>{};
       final http = ports.contains(80) ? await _probe.httpBanner(ip) : null;
       final rtsp = ports.contains(554)
           ? await _probe.rtspInfo(ip)
           : const RtspInfo();
+      final mdns = names[ip];
       final obs = DeviceObservation(
         ip: ip,
         openPorts: ports,
         httpServerBanner: http,
         rtspServerBanner: rtsp.server,
         rtspMediaMagic: rtsp.mediaMagic,
+        mdnsName: mdns?.name,
+        mdnsServices: mdns?.services ?? const {},
       );
       reports.add(engine.assess(obs));
     });
@@ -159,6 +184,31 @@ class UnsupportedWifiSource implements WifiSource {
   @override
   Future<WifiObservation> current() async =>
       const WifiObservation(security: WifiSecurity.unavailable);
+}
+
+/// One host's mDNS/Bonjour identity: the friendly name it advertises and the
+/// service types it announces (`_googlecast._tcp`, `_ipp._tcp`, …).
+class MdnsRecord {
+  const MdnsRecord({this.name, this.services = const {}});
+  final String? name;
+  final Set<String> services;
+}
+
+/// Discovers mDNS/Bonjour identities on the LAN, keyed by IP. Passive — it listens
+/// to the multicast announcements devices broadcast; it never probes a host. Like
+/// [WifiSource] the real implementation needs platform/multicast access (and the
+/// iOS multicast entitlement — see signing #79), so it sits behind an interface;
+/// the default [NoMdnsSource] returns nothing and the report simply shows no names.
+abstract interface class MdnsSource {
+  Future<Map<String, MdnsRecord>> discover();
+}
+
+/// The default: no mDNS yet, so no names. Never invents an identity.
+class NoMdnsSource implements MdnsSource {
+  const NoMdnsSource();
+
+  @override
+  Future<Map<String, MdnsRecord>> discover() async => const {};
 }
 
 /// Real probing over `dart:io`. Passive by construction: connect, read a banner,

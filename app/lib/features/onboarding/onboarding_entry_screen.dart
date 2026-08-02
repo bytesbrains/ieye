@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/ieye_theme.dart';
+import '../../widgets/bytesbrains_badge.dart';
 
 /// The first screen — the security-first hub. iEye is one guardian for two
 /// threats: it **secures your home** (iEye Secure, the front foot — value you feel
@@ -88,6 +89,8 @@ class OnboardingEntryScreen extends StatelessWidget {
                   color: IEyeColors.charcoalSoft,
                 ),
               ),
+              const SizedBox(height: 24),
+              const Center(child: BytesBrainsBadge()),
             ],
           ),
         ),
@@ -143,6 +146,18 @@ class _SecureHero extends StatelessWidget {
                 Navigator.of(context).pushNamed('/security-scan'),
             icon: const Icon(Icons.radar),
             label: const Text('Scan my home'),
+          ),
+          const SizedBox(height: 6),
+          // Same scan, pointed at the car's Wi-Fi hotspot — a growing surface as
+          // cars (esp. EVs) ship hotspots and people plug in dashcams and dongles.
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).pushNamed('/car-scan'),
+            style: TextButton.styleFrom(
+              foregroundColor: IEyeColors.tealDeep,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            icon: const Icon(Icons.directions_car_outlined, size: 20),
+            label: const Text('Or scan your car’s Wi-Fi'),
           ),
         ],
       ),
