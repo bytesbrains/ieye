@@ -34,8 +34,8 @@ void main() {
       };
     });
 
-    final obs = await const PlatformWifiSource().current();
-    // On the test host (macOS) the channel path is exercised.
+    // supported: true forces the channel path regardless of runner OS (CI = Linux).
+    final obs = await const PlatformWifiSource(supported: true).current();
     expect(obs.security, WifiSecurity.wpa2);
     expect(obs.ssid, 'home-network');
     expect(obs.band, '5 GHz');
@@ -48,7 +48,9 @@ void main() {
     messenger.setMockMethodCallHandler(channel, (call) async {
       throw PlatformException(code: 'boom');
     });
-    final obs = await const PlatformWifiSource().current();
+    // Force the channel path so this tests the ERROR handling (not the
+    // non-macOS short-circuit) on every runner.
+    final obs = await const PlatformWifiSource(supported: true).current();
     expect(obs.security, WifiSecurity.unavailable);
     expect(obs.readable, isFalse);
   });

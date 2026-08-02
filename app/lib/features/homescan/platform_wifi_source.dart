@@ -11,13 +11,17 @@ import '../../core/homescan/lan_scanner.dart';
 /// Only macOS is wired today (CoreWLAN). Every other platform — and any channel
 /// error — reports [WifiSecurity.unavailable] honestly, never a guessed "secure".
 class PlatformWifiSource implements WifiSource {
-  const PlatformWifiSource();
+  /// [supported] overrides the platform gate (default: macOS-only). Tests pass
+  /// `supported: true` to exercise the channel path on any runner (CI is Linux).
+  const PlatformWifiSource({bool? supported}) : _supported = supported;
+
+  final bool? _supported;
 
   static const MethodChannel _channel = MethodChannel('in.ieye/wifi');
 
   @override
   Future<WifiObservation> current() async {
-    if (!Platform.isMacOS) {
+    if (!(_supported ?? Platform.isMacOS)) {
       // Android/iOS Wi-Fi reads aren't wired yet; the UI states the gap.
       return const WifiObservation(security: WifiSecurity.unavailable);
     }
