@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/ieye_theme.dart';
+import '../../widgets/bytesbrains_badge.dart';
 
 /// The first screen — the security-first hub. iEye is one guardian for two
 /// threats: it **secures your home** (iEye Secure, the front foot — value you feel
@@ -88,6 +89,8 @@ class OnboardingEntryScreen extends StatelessWidget {
                   color: IEyeColors.charcoalSoft,
                 ),
               ),
+              const SizedBox(height: 24),
+              const Center(child: BytesBrainsBadge()),
             ],
           ),
         ),

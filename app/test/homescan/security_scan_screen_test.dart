@@ -102,6 +102,26 @@ void main() {
     expect(find.textContaining('protected'), findsNothing);
   });
 
+  testWidgets('the specialist CTA points to the BytesBrains contact email',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildIEyeTheme(),
+      home: const SecurityScanScreen(scanner: _CleanScanner()),
+    ));
+    await tester.tap(find.textContaining('my own home network'));
+    await tester.pump();
+    await tester.tap(find.text('Scan my home'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Talk to a specialist').first);
+    await tester.pump(); // run the handler up to the async clipboard write
+    await tester.pump(); // future resolves → showSnackBar is called
+    await tester.pump(const Duration(milliseconds: 400)); // SnackBar animates in
+    // (don't pumpAndSettle — it would fast-forward past the 4s auto-dismiss.)
+
+    expect(find.textContaining('contact@bytesbrains.com'), findsOneWidget);
+  });
+
   testWidgets(
     'car scan is honestly scoped — Wi-Fi, never the systems that drive the car',
     (tester) async {

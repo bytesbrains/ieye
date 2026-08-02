@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/homescan/home_scan_model.dart';
 import '../../../core/homescan/scanner.dart';
 import '../../../theme/ieye_theme.dart';
+import '../../../widgets/bytesbrains_badge.dart';
 
 /// Renders a [ScanReport] for a reader who is not technical and may be older
 /// (PRD §6 audience): big type, plain words, one finding per calm card. Severity
@@ -827,17 +829,26 @@ class _FixOwnerChip extends StatelessWidget {
 
 class _SpecialistButton extends StatelessWidget {
   const _SpecialistButton();
+
+  // In-app booking (findings + your details, one tap) lands next PR. Until then,
+  // point people to the BytesBrains inbox and copy the address so it's one tap.
+  // Copy is fire-and-forget so the message shows even if the clipboard is denied.
+  void _contact(BuildContext context) {
+    Clipboard.setData(const ClipboardData(text: kBytesBrainsContactEmail));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Email $kBytesBrainsContactEmail — we’ve copied it for you. '
+          'A BytesBrains specialist can close this safely.',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return TextButton.icon(
-      onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Specialist help is coming soon — we’ll connect you '
-            'with a vetted expert to close this safely.',
-          ),
-        ),
-      ),
+      onPressed: () => _contact(context),
       style: TextButton.styleFrom(
         foregroundColor: IEyeColors.tealDeep,
         padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -966,6 +977,11 @@ class _HonestFooter extends StatelessWidget {
         // Professional help goes deeper than a passive scan can — always offered,
         // never fear-sold.
         const _SpecialistButton(),
+        const SizedBox(height: 16),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: BytesBrainsBadge(centered: false),
+        ),
       ],
     );
   }
