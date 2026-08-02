@@ -1,34 +1,43 @@
 import { test, expect } from "@playwright/test";
 
-// Public landing — every section renders with its real, honest copy. No auth.
+// Public landing — repositioned to lead with iEye Secure (home security), with
+// iEye Watch (welfare) as the deeper why and BytesBrains as the sponsoring
+// company. No auth. The old donation/supporter-wall model has been retired.
 test.describe("public landing page", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/");
   });
 
-  test("hero leads with the promise, not the floor", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: "iEye gets help to you in time." })).toBeVisible();
-    await expect(page.getByText("You will not go unseen.")).toBeVisible();
-    await expect(page.getByRole("link", { name: /see how it works/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /ways to contribute/i })).toBeVisible();
-  });
-
-  test("header nav exposes the four sections + sign in", async ({ page }) => {
-    const nav = page.getByRole("navigation", { name: "Primary" });
-    for (const label of ["How it works", "Trust & privacy", "Ways to help", "Transparency"]) {
-      await expect(nav.getByRole("link", { name: label })).toBeVisible();
-    }
-    await expect(page.getByRole("link", { name: /^sign in$/i })).toBeVisible();
-  });
-
-  test("the gap section frames the real danger", async ({ page }) => {
+  test("hero leads with the dual-guardian promise + a scan CTA", async ({ page }) => {
     await expect(
-      page.getByRole("heading", { name: /Living alone isn.t the danger/i })
+      page.getByRole("heading", { name: /A guardian for your home/i })
+    ).toBeVisible();
+    await expect(page.getByText(/You will not go unseen/i)).toBeVisible();
+    await expect(
+      page.locator("#top").getByRole("link", { name: /scan your home/i })
     ).toBeVisible();
   });
 
-  test("how it works shows both speeds and the capability claim", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: /You don.t have to do anything/i })).toBeVisible();
+  test("header nav exposes the new sections + sign in + scan CTA", async ({ page }) => {
+    const nav = page.getByRole("navigation", { name: "Primary" });
+    for (const label of ["iEye Secure", "How it works", "Trust & privacy", "BytesBrains"]) {
+      await expect(nav.getByRole("link", { name: label })).toBeVisible();
+    }
+    await expect(page.getByRole("link", { name: /^sign in$/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /scan your home/i })).toHaveAttribute("href", "/app");
+  });
+
+  test("iEye Secure section leads with the home-security scan", async ({ page }) => {
+    const secure = page.locator("#secure");
+    await expect(
+      secure.getByRole("heading", { name: /See what a stranger could reach in your home/i })
+    ).toBeVisible();
+    await expect(secure.getByText(/Finds exposed cameras/i)).toBeVisible();
+    await expect(secure.getByText(/Checks your Wi-Fi/i)).toBeVisible();
+  });
+
+  test("iEye Watch (how it works) shows both speeds and the capability claim", async ({ page }) => {
+    await expect(page.getByText(/iEye Watch — the reason we exist/i)).toBeVisible();
     await expect(page.getByRole("heading", { name: /When seconds matter/i })).toBeVisible();
     await expect(page.getByRole("heading", { name: /When no one would have noticed/i })).toBeVisible();
     await expect(page.getByText(/This is the speed that can save a life/i)).toBeVisible();
@@ -40,11 +49,16 @@ test.describe("public landing page", () => {
     await expect(trust.getByRole("heading")).toContainText("never watch");
   });
 
-  test("roadmap: four tiers, honest state pills, why-funds, honesty line", async ({ page }) => {
+  test("BytesBrains section funds the mission and gives a contact", async ({ page }) => {
+    const bb = page.locator("#bytesbrains");
+    await expect(bb.getByRole("heading", { name: /help you secure it/i })).toBeVisible();
+    await expect(bb.getByText(/every audit funds the watch-over mission/i)).toBeVisible();
+    await expect(bb.getByRole("link", { name: /contact@bytesbrains\.com/i })).toBeVisible();
+  });
+
+  test("roadmap: four tiers with honest state pills", async ({ page }) => {
     const roadmap = page.locator("#roadmap");
     await expect(roadmap.getByRole("heading", { name: "More senses. Never less privacy." })).toBeVisible();
-    await expect(roadmap.getByText("Where iEye is going")).toBeVisible();
-
     for (const tier of [
       "The phone in your pocket",
       "Quiet helpers around the home",
@@ -53,54 +67,26 @@ test.describe("public landing page", () => {
     ]) {
       await expect(roadmap.getByRole("heading", { name: tier })).toBeVisible();
     }
-    // State carried in TEXT, not colour alone.
     await expect(roadmap.getByText("Here today")).toBeVisible();
-    await expect(roadmap.getByText("Next").first()).toBeVisible();
-    await expect(roadmap.getByText("Later")).toBeVisible();
-
-    // The "why it costs money" band + honest capability claim.
-    await expect(roadmap.getByText("Why it costs money")).toBeVisible();
-    await expect(roadmap.getByText("Hardware buys signal")).toBeVisible();
-    await expect(roadmap.getByText(/not a substitute for emergency services/i)).toBeVisible();
-
-    // Brand guardrail: no surveillance vocabulary in the roadmap copy. Broad
-    // match — "surveil" also catches "surveillance" (prior \bsurveil\b missed it).
+    // Brand guardrail: no surveillance vocabulary in the roadmap copy.
     await expect(roadmap).not.toContainText(/surveil|monitor|track you|spy/i);
   });
 
-  test("contribute: waitlist, skills, and (default) funder-interest panel", async ({ page }) => {
-    const contribute = page.locator("#contribute");
-    await expect(contribute.getByRole("heading", { name: /Want it for someone you love/i })).toBeVisible();
-    await expect(contribute.getByRole("button", { name: /continue with google/i })).toBeVisible();
-    await expect(contribute.getByRole("heading", { name: /Help build iEye/i })).toBeVisible();
-
-    // Flag OFF (default build): interest capture, never a live "donate".
-    await expect(contribute.getByText("Help us build the senses.")).toBeVisible();
-    await expect(contribute.getByRole("link", { name: /register funder interest/i })).toBeVisible();
-    await expect(contribute.getByText(/Contributing money isn.t open yet/i)).toBeVisible();
-    await expect(contribute.getByText(/not tax-deductible/i)).toBeVisible();
-    // No loud donate CTA on the public page.
-    await expect(contribute.getByRole("button", { name: /^donate$/i })).toHaveCount(0);
-  });
-
-  test("contribute: open-source paths point at the public GitHub repo", async ({ page }) => {
-    const contribute = page.locator("#contribute");
-    // The repo is public — concrete ways to help, linked to GitHub.
-    await expect(contribute.getByRole("heading", { name: /ways to contribute/i })).toBeVisible();
-    for (const way of [/join the discussion/i, /open a pull request/i, /write tests/i, /build the sdks/i]) {
-      await expect(contribute.getByRole("heading", { name: way })).toBeVisible();
-    }
-    // The primary CTA links to bytesbrains/ieye.
-    const ghLink = contribute.getByRole("link", { name: /view iEye on GitHub/i });
+  test("open-source section points at the public GitHub repo", async ({ page }) => {
+    const os = page.locator("#open-source");
+    await expect(os.getByRole("heading", { name: /ways to contribute/i })).toBeVisible();
+    const ghLink = os.getByRole("link", { name: /view iEye on GitHub/i });
     await expect(ghLink).toHaveAttribute("href", "https://github.com/bytesbrains/ieye");
     await expect(ghLink).toHaveAttribute("target", "_blank");
   });
 
-  test("supporter wall is honestly 'coming soon'", async ({ page }) => {
-    await expect(page.locator("#transparency").getByText(/supporter wall is coming soon/i)).toBeVisible();
+  test("the reposition dropped the 'not a business' framing", async ({ page }) => {
+    // iEye is now sponsored by BytesBrains (a company) — the old public-good /
+    // "not a business" donation framing must be gone from the page.
+    await expect(page.locator("body")).not.toContainText(/not a business/i);
   });
 
-  test("footer links to legal pages and section anchors", async ({ page }) => {
+  test("footer links to legal pages", async ({ page }) => {
     const footer = page.getByRole("contentinfo");
     await expect(footer.getByRole("link", { name: "Privacy", exact: true })).toHaveAttribute("href", "/privacy");
     await expect(footer.getByRole("link", { name: "Terms", exact: true })).toHaveAttribute("href", "/terms");

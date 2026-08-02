@@ -6,15 +6,9 @@ import { signInToAccount, uniqueUser } from "./helpers";
 // a Stripe checkout — that's an external redirect and isn't end-to-end-able here;
 // the backend gate (functions/src/stripe.ts) is the real boundary.
 test.describe("fiat contributions (flag ON)", () => {
-  test("landing money panel becomes a live 'contribute by card' CTA", async ({ page }) => {
-    await page.goto("/");
-    const contribute = page.locator("#contribute");
-    await expect(contribute.getByText("Help keep iEye running.")).toBeVisible();
-    await expect(contribute.getByRole("link", { name: /contribute by card/i })).toBeVisible();
-    // The funder-interest (flag-OFF) copy is gone in this state.
-    await expect(contribute.getByText("Help us build the senses.")).toHaveCount(0);
-  });
-
+  // NOTE: the landing money panel was retired with the donation model (the public
+  // page no longer surfaces contributions). The /account contribution flow and its
+  // backend remain for now — covered below — pending a separate cleanup.
   test("account shows the amount picker + full point-of-payment disclaimer", async ({ page }) => {
     await signInToAccount(page, uniqueUser("fiat"));
 

@@ -16,7 +16,7 @@ test.describe("routing", () => {
 
   test("unknown path falls back to the public landing", async ({ page }) => {
     await page.goto("/this-route-does-not-exist");
-    await expect(page.getByRole("heading", { name: "iEye gets help to you in time." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /A guardian for your home/i })).toBeVisible();
   });
 
   test("/account requires sign-in — redirects to /signin", async ({ page }) => {

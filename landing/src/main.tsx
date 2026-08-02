@@ -16,6 +16,12 @@ const WallPreview = lazy(() =>
   import("./pages/WallPreview").then((m) => ({ default: m.WallPreview }))
 );
 
+// The app hub (/app) — install links + early-access waitlist. Its own chunk so
+// the landing bundle stays lean; Firebase only enters on a real waitlist click.
+const AppHub = lazy(() =>
+  import("./pages/AppHub").then((m) => ({ default: m.AppHub }))
+);
+
 // Published legal pages — own chunks, no Firebase.
 const Privacy = lazy(() =>
   import("./pages/Privacy").then((m) => ({ default: m.Privacy }))
@@ -43,6 +49,15 @@ function Lazy({ children }: { children: React.ReactNode }) {
 //   /admin   -> admin shell           (lazy, RequireAdmin — admin custom claim)
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
+  // The app hub — install links + early-access waitlist (lazy, its own chunk).
+  {
+    path: "/app",
+    element: (
+      <Lazy>
+        <AppHub />
+      </Lazy>
+    ),
+  },
   // Designer comparison artifact for #36 — lazy-loaded (its own chunk, no Firebase).
   {
     path: "/wall-preview",
