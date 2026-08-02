@@ -68,21 +68,91 @@ class _Summary extends StatelessWidget {
       ),
     };
 
-    return Semantics(
-      header: true,
-      liveRegion: true,
-      child: Row(
+    final flagged = report.flagged.length;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: IEyeColors.paperDim,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: accent, size: 30),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(headline, style: text.headlineSmall?.copyWith(fontSize: 24)),
+          Semantics(
+            header: true,
+            liveRegion: true,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: accent, size: 30),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(headline,
+                      style: text.headlineSmall?.copyWith(fontSize: 22)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          // At-a-glance counts — scannable, honest (a fact, not an all-clear).
+          Row(
+            children: [
+              _Stat(label: 'Devices seen', value: '${report.deviceCount}'),
+              const _StatDivider(),
+              _Stat(
+                label: 'Need a look',
+                value: '$flagged',
+                accent: flagged > 0 ? IEyeColors.amberDeep : IEyeColors.tealDeep,
+              ),
+              const _StatDivider(),
+              _Stat(label: 'Fixes', value: '${report.findingCount}'),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+/// One at-a-glance count in the summary card.
+class _Stat extends StatelessWidget {
+  const _Stat({required this.label, required this.value, this.accent});
+  final String label;
+  final String value;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(value,
+              style: text.headlineSmall?.copyWith(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w700,
+                  color: accent ?? IEyeColors.charcoal)),
+          const SizedBox(height: 2),
+          Text(label,
+              style: text.bodyMedium
+                  ?.copyWith(fontSize: 13, color: IEyeColors.charcoalMuted)),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 1,
+        height: 34,
+        margin: const EdgeInsets.symmetric(horizontal: 12),
+        color: const Color(0x22000000),
+      );
 }
 
 /// One device, its plain identity, and every finding about it.

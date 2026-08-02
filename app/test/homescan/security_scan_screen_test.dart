@@ -33,13 +33,13 @@ void main() {
     await tester.pumpWidget(harness());
 
     // Intro state: the one amber action, and the honest promise.
-    expect(find.text('Scan my network'), findsOneWidget);
+    expect(find.text('Scan my home'), findsOneWidget);
     expect(find.textContaining('can’t promise your home is safe'), findsWidgets);
 
     // Affirm ownership, then scan.
     await tester.tap(find.textContaining("my own home network"));
     await tester.pump();
-    await tester.tap(find.text('Scan my network'));
+    await tester.tap(find.text('Scan my home'));
     await tester.pumpAndSettle();
 
     // Report state: the CRITICAL finding surfaces, badged by WORD (not colour).

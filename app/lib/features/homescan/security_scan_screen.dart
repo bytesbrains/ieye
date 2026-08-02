@@ -128,7 +128,7 @@ class _Intro extends StatelessWidget {
           // Disabled (null) until consent is given.
           onPressed: consented ? onScan : null,
           icon: const Icon(Icons.radar),
-          label: const Text('Scan my network'),
+          label: const Text('Scan my home'),
         ),
         const SizedBox(height: 16),
         Row(
