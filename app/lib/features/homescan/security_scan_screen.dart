@@ -216,13 +216,13 @@ class _Scanning extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.only(top: 80),
+      padding: const EdgeInsets.only(top: 64),
       child: Column(
         children: [
-          const CircularProgressIndicator(color: IEyeColors.amberDeep),
-          const SizedBox(height: 28),
+          const _ScanningPulse(),
+          const SizedBox(height: 32),
           Text(
-            'Looking at the devices on your network…',
+            'Looking over the devices on your network…',
             textAlign: TextAlign.center,
             style: text.titleLarge?.copyWith(fontSize: 19),
           ),
@@ -237,6 +237,75 @@ class _Scanning extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A calm radar "ping" — a beacon looking out over the network. Two teal rings
+/// expand and fade around a central beacon icon. On brand (a lighthouse sweeping),
+/// never an anxious spinner; teal (calm), never amber alarm.
+class _ScanningPulse extends StatefulWidget {
+  const _ScanningPulse();
+  @override
+  State<_ScanningPulse> createState() => _ScanningPulseState();
+}
+
+class _ScanningPulseState extends State<_ScanningPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2200),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  Widget _ring(double t) {
+    final scale = 0.45 + t * 0.55; // 0.45 → 1.0
+    return Opacity(
+      opacity: ((1 - t) * 0.45).clamp(0.0, 1.0),
+      child: Container(
+        width: 116 * scale,
+        height: 116 * scale,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: IEyeColors.teal, width: 2),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 116,
+      height: 116,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) => Stack(
+          alignment: Alignment.center,
+          children: [
+            _ring(_c.value),
+            _ring((_c.value + 0.5) % 1.0),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: IEyeColors.tealDeep.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.wifi_find_outlined,
+                color: IEyeColors.tealDeep,
+                size: 28,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

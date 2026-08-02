@@ -56,4 +56,33 @@ void main() {
     expect(find.textContaining('Wi-Fi'), findsWidgets);
     expect(find.text('WPA/TKIP · old'), findsOneWidget);
   });
+
+  testWidgets('a clean scan is honest — "not a clean bill of health", never safe',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      theme: buildIEyeTheme(),
+      home: const SecurityScanScreen(scanner: _CleanScanner()),
+    ));
+
+    await tester.tap(find.textContaining('my own home network'));
+    await tester.pump();
+    await tester.tap(find.text('Scan my home'));
+    await tester.pumpAndSettle();
+
+    // Absence of findings is a LIMIT of a passive scan, not proof of safety.
+    expect(find.textContaining('not a clean bill of health'), findsOneWidget);
+    expect(find.textContaining('couldn’t look deeper'), findsWidgets);
+    // Still offers the deeper professional check.
+    expect(find.text('Talk to a specialist'), findsWidgets);
+    // Never a green all-clear (over-trust guardrail).
+    expect(find.textContaining('protected'), findsNothing);
+  });
+}
+
+/// A scanner that finds nothing — to exercise the honest "clean" state.
+class _CleanScanner implements NetworkScanner {
+  const _CleanScanner();
+  @override
+  Future<ScanReport> scan() async =>
+      ScanReport(startedAt: DateTime(2026), devices: const []);
 }

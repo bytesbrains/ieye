@@ -113,6 +113,10 @@ class _ExposureOverview extends StatelessWidget {
             const SizedBox(height: 12),
             _SeverityBars(report.severityCounts),
           ],
+          if (report.findingCount == 0) ...[
+            const SizedBox(height: 14),
+            const _NoFindingsCaveat(),
+          ],
           const SizedBox(height: 18),
           const Divider(height: 1, color: Color(0x22000000)),
           const SizedBox(height: 16),
@@ -737,6 +741,7 @@ class _FixOwnerChip extends StatelessWidget {
 }
 
 class _SpecialistButton extends StatelessWidget {
+  const _SpecialistButton();
   @override
   Widget build(BuildContext context) {
     return TextButton.icon(
@@ -761,6 +766,67 @@ class _SpecialistButton extends StatelessWidget {
   }
 }
 
+/// Shown when the scan found nothing — the "not a clean bill of health" moment.
+/// Absence of findings is a LIMIT of a passive scan (devices block inspection;
+/// cloud cameras never show), not proof of safety. Keeps the user alert and
+/// offers a deeper professional check — honest caution, never fear-selling.
+class _NoFindingsCaveat extends StatelessWidget {
+  const _NoFindingsCaveat();
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: IEyeColors.amber.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: IEyeColors.amber, width: 1.2),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.info_outline,
+                color: IEyeColors.amberDeep,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'A good sign — but not a clean bill of health',
+                  style: text.bodyMedium?.copyWith(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: IEyeColors.charcoal,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This check is passive — it only sees what each device chooses to '
+            'reveal, and many block a closer look. Some of the worst exposures, '
+            'like a camera quietly streaming to a maker’s cloud, never show up in '
+            'a scan like this. So “nothing found” can just mean “couldn’t look '
+            'deeper.” Stay alert — and to be sure, a specialist can check what '
+            'this scan can’t.',
+            style: text.bodyMedium?.copyWith(
+              fontSize: 14,
+              color: IEyeColors.charcoalSoft,
+            ),
+          ),
+          const _SpecialistButton(),
+        ],
+      ),
+    );
+  }
+}
+
 class _CleanDevicesNote extends StatelessWidget {
   const _CleanDevicesNote(this.count);
   final int count;
@@ -777,8 +843,9 @@ class _CleanDevicesNote extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            '$count other device${count == 1 ? '' : 's'} showed no known issues '
-            '— this isn’t a guarantee, only that we spotted nothing familiar.',
+            '$count other device${count == 1 ? '' : 's'} showed nothing familiar — '
+            'but a passive scan can’t fully inspect a device that doesn’t reveal '
+            'much, so that’s “nothing we could see”, not a clean bill of health.',
             style: text.bodyMedium?.copyWith(
               fontSize: 14,
               color: IEyeColors.charcoalMuted,
@@ -790,20 +857,31 @@ class _CleanDevicesNote extends StatelessWidget {
   }
 }
 
-/// Mechanism, never outcome: say plainly what the scan can and can't promise.
+/// Mechanism, never outcome: say plainly what the scan can and can't promise —
+/// and that absence of findings is a limit of the scan, not proof of safety.
 class _HonestFooter extends StatelessWidget {
   const _HonestFooter();
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Text(
-      'This scan looks for known patterns on your own network and never signs in '
-      'to your devices. It can miss things and can’t prove your home is safe — it '
-      'points you to what’s worth fixing. Nothing it finds leaves this phone.',
-      style: text.bodyMedium?.copyWith(
-        fontSize: 13,
-        color: IEyeColors.charcoalMuted,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'This scan looks for known patterns on your own network and never signs '
+          'in. Finding nothing is not proof you’re safe — it’s passive, many '
+          'devices don’t reveal much, and cloud-connected cameras never show here. '
+          'Stay aware. Nothing it finds leaves this phone.',
+          style: text.bodyMedium?.copyWith(
+            fontSize: 13,
+            color: IEyeColors.charcoalMuted,
+          ),
+        ),
+        const SizedBox(height: 4),
+        // Professional help goes deeper than a passive scan can — always offered,
+        // never fear-sold.
+        const _SpecialistButton(),
+      ],
     );
   }
 }
