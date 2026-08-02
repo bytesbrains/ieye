@@ -49,7 +49,12 @@ class SupportRequest {
   final String? timezone;
   final String? area;
 
-  bool get isValid => callbackNumber.trim().length >= 6;
+  /// The one place that decides what counts as a callable number — the screen's
+  /// submit button and [isValid] must never drift apart.
+  static bool isValidCallbackNumber(String number) =>
+      number.trim().length >= 6;
+
+  bool get isValid => isValidCallbackNumber(callbackNumber);
 }
 
 /// A privacy-conscious, specialist-useful summary of a scan — counts, the worst

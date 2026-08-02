@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show debugDefaultTargetPlatformOverride;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ieye/core/homescan/scanner.dart';
@@ -73,10 +75,28 @@ void main() {
 
     expect(find.textContaining('Sign in so we can reach you'), findsOneWidget);
     expect(find.text('Continue with Google'), findsOneWidget);
-    expect(find.text('Continue with Apple'), findsOneWidget);
+    // flutter_test reports the platform as Android, where Apple sign-in has no
+    // web-flow Service ID yet (#79) — so no Apple button that can only fail.
+    expect(find.text('Continue with Apple'), findsNothing);
     // No email field to type wrong, and no form yet.
     expect(find.text('Send my request'), findsNothing);
     expect(find.byType(TextField), findsNothing);
+  });
+
+  testWidgets('Apple sign-in is offered where it can succeed (iOS)', (
+    tester,
+  ) async {
+    // Reset before the test body ends — the binding verifies foundation debug
+    // vars are unset BEFORE tearDown callbacks run, so addTearDown is too late.
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    try {
+      await tester.pumpWidget(harness(_FakeAuth(), _FakeRepo()));
+
+      expect(find.text('Continue with Google'), findsOneWidget);
+      expect(find.text('Continue with Apple'), findsOneWidget);
+    } finally {
+      debugDefaultTargetPlatformOverride = null;
+    }
   });
 
   testWidgets('sign in → fill callback → submit sends the request', (
@@ -124,11 +144,13 @@ void main() {
     await tester.pumpWidget(harness(_FakeAuth(), repo, report: report));
     await signInWithGoogle(tester);
 
-    // With a report present, sharing defaults ON with an honest summary.
-    expect(
-      find.textContaining('Share my scan results'),
-      findsOneWidget,
-    );
+    // Sharing is OFF until the user turns it on — never a pre-checked box.
+    expect(find.textContaining('Share my scan results'), findsOneWidget);
+    expect(find.textContaining('they’ll only see your note'), findsOneWidget);
+
+    // Opt in (the share-findings tile is the first Switch on the form) — the
+    // copy now itemises what travels, and the summary rides along on submit.
+    await tapVisible(tester, find.byType(Switch).first);
     expect(find.textContaining('No passwords'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).first, '9876543210');
@@ -138,6 +160,22 @@ void main() {
     expect(repo.request!.shareFindings, isTrue);
     expect(repo.request!.findingsSummary, isNotNull);
     expect(repo.request!.findingsSummary!['criticalCount'], greaterThan(0));
+  });
+
+  testWidgets('untouched share toggle sends no findings', (tester) async {
+    final report = (await tester.runAsync(
+      () => const StubScanner(settleDelay: Duration.zero).scan(),
+    ))!;
+    final repo = _FakeRepo();
+    await tester.pumpWidget(harness(_FakeAuth(), repo, report: report));
+    await signInWithGoogle(tester);
+
+    await tester.enterText(find.byType(TextField).first, '9876543210');
+    await tester.pump();
+    await tapVisible(tester, find.text('Send my request'));
+
+    expect(repo.request!.shareFindings, isFalse);
+    expect(repo.request!.findingsSummary, isNull);
   });
 
   testWidgets('opt-in location attaches a timezone; off by default', (

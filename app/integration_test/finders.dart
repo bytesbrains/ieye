@@ -7,6 +7,7 @@ import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
 import 'package:ieye/features/checker/checker_invite_screen.dart';
 import 'package:ieye/features/support/auth_service.dart';
+import 'package:ieye/features/support/speech_input.dart';
 import 'package:ieye/features/support/support_repository.dart';
 import 'package:ieye/features/support/support_request.dart';
 
@@ -57,7 +58,9 @@ class FakeSupportRepo implements SupportRepository {
 
 /// Boot the real app and let it settle. [scanner] injects a deterministic scan
 /// engine (a StubScanner); [auth]/[repo] inject fakes for the support-request E2E
-/// so it never touches Firebase. Production uses the real implementations.
+/// so it never touches Firebase. Speech is always the no-op engine here so an E2E
+/// run can't init the real recogniser (or raise a TCC mic prompt on a fresh
+/// machine). Production uses the real implementations.
 Future<void> pumpApp(
   WidgetTester tester, {
   NetworkScanner? scanner,
@@ -68,6 +71,7 @@ Future<void> pumpApp(
     scanner: scanner,
     authService: auth,
     supportRepository: repo,
+    speechInput: const NoSpeechInput(),
   ));
   await tester.pumpAndSettle();
 }

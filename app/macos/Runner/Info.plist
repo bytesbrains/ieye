@@ -33,5 +33,19 @@
 	<string>iEye uses the microphone only when you tap the mic to speak a note for a specialist request.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>iEye turns your spoken note into text for a specialist request, only while you are speaking it.</string>
+	<!-- Google Sign-In returns to the app via this URL scheme (same reversed OAuth
+	     client id as iOS). NOTE: persistent Firebase auth on macOS also needs the
+	     Keychain Sharing capability — deferred with release signing (#79). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.184561867400-2o9f4pouck0t7op8ljj1hhb6qn4disb3</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

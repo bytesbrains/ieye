@@ -42,9 +42,10 @@ paths = [
   # FlutterFire-generated Firebase CLIENT config. The "apiKey" in these files is a
   # public project identifier that is DESIGNED to ship in client apps and be
   # committed — it is not a secret. Access is gated by Firestore Security Rules
-  # (support_requests is write-only + owner-scoped) and App Check, never by hiding
-  # this key. See Firebase docs: "Learn about using and managing API keys for
-  # Firebase." Narrowly scoped to the exact generated filenames.
+  # (support_requests is write-only, owner-scoped, shape-validated), never by
+  # hiding this key. (App Check is a planned follow-up, not wired yet.) See
+  # Firebase docs: "Learn about using and managing API keys for Firebase."
+  # Narrowly scoped to the exact generated filenames.
   '''(^|/)firebase_options\.dart$''',
   '''(^|/)google-services\.json$''',
   '''(^|/)GoogleService-Info\.plist$''',

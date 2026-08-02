@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -18,6 +22,9 @@ class AuthUser {
 abstract interface class AuthService {
   /// The already-signed-in user, or null. (Firebase persists the session.)
   AuthUser? get currentUser;
+
+  /// Both sign-ins resolve to null when the user backs out — a cancel is a
+  /// choice, not a failure, so callers shouldn't show an error for it.
   Future<AuthUser?> signInWithGoogle();
   Future<AuthUser?> signInWithApple();
   Future<void> signOut();
@@ -46,23 +53,49 @@ class FirebaseAuthService implements AuthService {
     // URL scheme, the Android SHA-1) is set up in the Firebase console — see the
     // PR's setup notes. initialize() is idempotent.
     await google.initialize();
-    final account = await google.authenticate();
+    final GoogleSignInAccount account;
+    try {
+      account = await google.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      rethrow;
+    }
     final idToken = account.authentication.idToken;
     final credential = fb.GoogleAuthProvider.credential(idToken: idToken);
     final result = await _auth.signInWithCredential(credential);
     return _map(result.user);
   }
 
+  /// A one-shot random nonce for Sign in with Apple: its SHA-256 goes into the
+  /// Apple request, the raw value into the Firebase credential. Firebase checks
+  /// they match, so a stolen Apple idToken can't be replayed against our project.
+  static String _rawNonce() {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(32, (_) => charset[random.nextInt(charset.length)])
+        .join();
+  }
+
   @override
   Future<AuthUser?> signInWithApple() async {
-    final apple = await SignInWithApple.getAppleIDCredential(
-      scopes: const [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-    );
+    final rawNonce = _rawNonce();
+    final AuthorizationCredentialAppleID apple;
+    try {
+      apple = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: sha256.convert(utf8.encode(rawNonce)).toString(),
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return null;
+      rethrow;
+    }
     final oauth = fb.OAuthProvider('apple.com').credential(
       idToken: apple.identityToken,
+      rawNonce: rawNonce,
       accessToken: apple.authorizationCode,
     );
     final result = await _auth.signInWithCredential(oauth);

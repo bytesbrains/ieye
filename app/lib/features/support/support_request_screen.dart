@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 
 import '../../core/homescan/scanner.dart';
@@ -10,8 +12,9 @@ import 'support_request.dart';
 
 /// Raise a request for professional help — a BytesBrains specialist closes what a
 /// passive scan can only flag. Sign in with Google/Apple (no password, no typo'd
-/// email), one tap to attach the scan, a callback number and time, an optional
-/// note (with voice-to-text), and — only if the user opts in — timezone + area.
+/// email), an opt-in toggle (off by default) to attach the scan, a callback
+/// number and time, an optional note (with voice-to-text), and — only if the
+/// user opts in — timezone + area.
 ///
 /// Honest by construction: everything shared is on this screen and opt-in; the
 /// home inventory travels only when the user says so, and nothing else leaves the
@@ -46,7 +49,9 @@ class _SupportRequestScreenState extends State<SupportRequestScreen> {
   final _area = TextEditingController();
   final _note = TextEditingController();
   PreferredTime _time = PreferredTime.anytime;
-  late bool _shareFindings = widget.report != null;
+  // Off by default: sharing the home inventory is a choice the user makes, never
+  // a pre-checked box (matches SupportRequest's "opt-in, defaults to NOT shared").
+  bool _shareFindings = false;
   bool _shareLocation = false;
 
   // Speech.
@@ -69,6 +74,9 @@ class _SupportRequestScreenState extends State<SupportRequestScreen> {
 
   @override
   void dispose() {
+    // The promise on the tin: the mic listens only while this screen asks it to.
+    // Leaving mid-dictation must end the platform speech session, not orphan it.
+    widget.speech.stop();
     _callback.dispose();
     _area.dispose();
     _note.dispose();
@@ -98,9 +106,14 @@ class _SupportRequestScreenState extends State<SupportRequestScreen> {
       if (mounted) setState(() {});
       return;
     }
+    // Each transcript replaces everything after this snapshot, so anything typed
+    // while listening is overwritten — acceptable for a dictation session.
     _noteBeforeListen = _note.text.trim();
     await widget.speech.start(
       onText: (t) {
+        // A transcript can land after the screen is gone (dispose stops the
+        // engine, but a result may already be in flight).
+        if (!mounted) return;
         _note.text = _noteBeforeListen.isEmpty ? t : '$_noteBeforeListen $t';
         _note.selection =
             TextSelection.collapsed(offset: _note.text.length);
@@ -167,14 +180,25 @@ class _SupportRequestScreenState extends State<SupportRequestScreen> {
         top: false,
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
-          child: _submittedId != null
-              ? _Sent(onDone: () => Navigator.of(context).pop())
-              : _user == null
-                  ? _SignIn(busy: _busy, error: _error, onGoogle: () => _signIn(widget.auth.signInWithGoogle), onApple: () => _signIn(widget.auth.signInWithApple))
-                  : _buildForm(context),
+          child: _body(context),
         ),
       ),
     );
+  }
+
+  Widget _body(BuildContext context) {
+    if (_submittedId != null) {
+      return _Sent(onDone: () => Navigator.of(context).pop());
+    }
+    if (_user == null) {
+      return _SignIn(
+        busy: _busy,
+        error: _error,
+        onGoogle: () => _signIn(widget.auth.signInWithGoogle),
+        onApple: () => _signIn(widget.auth.signInWithApple),
+      );
+    }
+    return _buildForm(context);
   }
 
   Widget _buildForm(BuildContext context) {
@@ -293,7 +317,9 @@ class _SupportRequestScreenState extends State<SupportRequestScreen> {
 
         FilledButton.icon(
           onPressed:
-              (_busy || _callback.text.trim().length < 6) ? null : _submit,
+              (_busy || !SupportRequest.isValidCallbackNumber(_callback.text))
+                  ? null
+                  : _submit,
           icon: _busy
               ? const SizedBox(
                   width: 18,
@@ -306,8 +332,8 @@ class _SupportRequestScreenState extends State<SupportRequestScreen> {
         ),
         const SizedBox(height: 16),
         Text(
-          'We only send what you see on this screen. Nothing else — no scan '
-          'details, no location — leaves your phone unless you chose to share it.',
+          'We only send what you chose on this screen. Nothing else — no scan '
+          'details, no location — leaves your phone unless you turned it on.',
           style: text.bodyMedium?.copyWith(
             fontSize: 13,
             color: IEyeColors.charcoalMuted,
@@ -362,6 +388,13 @@ class _SignIn extends StatelessWidget {
   final VoidCallback onGoogle;
   final VoidCallback onApple;
 
+  /// Apple sign-in is native-only today: on Android it needs a web-flow Service
+  /// ID we don't have yet (tied to the Apple Developer Program, #79). Better no
+  /// button than one that can only fail.
+  static bool get _appleAvailable =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -392,12 +425,14 @@ class _SignIn extends StatelessWidget {
           label: 'Continue with Google',
           onPressed: busy ? null : onGoogle,
         ),
-        const SizedBox(height: 12),
-        _AuthButton(
-          icon: Icons.apple,
-          label: 'Continue with Apple',
-          onPressed: busy ? null : onApple,
-        ),
+        if (_appleAvailable) ...[
+          const SizedBox(height: 12),
+          _AuthButton(
+            icon: Icons.apple,
+            label: 'Continue with Apple',
+            onPressed: busy ? null : onApple,
+          ),
+        ],
         if (busy) ...[
           const SizedBox(height: 20),
           const Center(child: CircularProgressIndicator()),
@@ -518,11 +553,14 @@ class _ShareFindingsTile extends StatelessWidget {
             ],
           ),
           Text(
+            // Itemise what actually travels (see summarizeReport) — counts alone
+            // would undersell it, and honest copy is the brand.
             value
                 ? 'They’ll see a summary: ${report.deviceCount} devices, '
                     '${report.findingCount} findings '
-                    '(${report.criticalCount} critical). No passwords — the scan '
-                    'never had any.'
+                    '(${report.criticalCount} critical) — each flagged device’s '
+                    'type, name, local network address and finding titles. No '
+                    'passwords — the scan never had any.'
                 : 'Off — they’ll only see your note. You can describe it in your '
                     'own words instead.',
             style: text.bodyMedium?.copyWith(
