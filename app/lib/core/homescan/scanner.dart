@@ -5,12 +5,18 @@ import 'home_scan_model.dart';
 /// [FingerprintEngine]. Pure data — it holds no transport and is never synced
 /// (the inventory is a map of someone's home; it stays on the phone).
 class ScanReport {
-  ScanReport({required this.startedAt, required this.devices});
+  ScanReport({required this.startedAt, required this.devices, this.wifi});
 
   final DateTime startedAt;
   final List<DeviceReport> devices;
 
-  Iterable<Finding> get _allFindings => devices.expand((d) => d.findings);
+  /// Network-level Wi-Fi findings (open/weak encryption), null if not gathered.
+  final WifiReport? wifi;
+
+  Iterable<Finding> get _allFindings => [
+        ...devices.expand((d) => d.findings),
+        ...?wifi?.findings,
+      ];
 
   int get deviceCount => devices.length;
 
@@ -68,7 +74,19 @@ class StubScanner implements NetworkScanner {
   Future<ScanReport> scan() async {
     await Future<void>.delayed(settleDelay);
     final devices = [for (final o in _demoObservations) engine.assess(o)];
-    return ScanReport(startedAt: DateTime.now(), devices: devices);
+    // Representative Wi-Fi: an older WPA/TKIP network, to demo the encryption
+    // stat + a MEDIUM finding. Generic name — not a real SSID.
+    const wifiObs = WifiObservation(
+      ssid: 'home-network',
+      security: WifiSecurity.wpaTkip,
+      band: '2.4 GHz',
+      channel: 6,
+    );
+    return ScanReport(
+      startedAt: DateTime.now(),
+      devices: devices,
+      wifi: WifiReport(observation: wifiObs, findings: engine.assessWifi(wifiObs)),
+    );
   }
 
   /// Representative demo devices: four XiongMai cameras (cloud/P2P on), two units

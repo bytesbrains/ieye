@@ -21,6 +21,10 @@ class ScanReportView extends StatelessWidget {
       children: [
         _Summary(report),
         const SizedBox(height: 24),
+        if (report.wifi != null) ...[
+          _WifiSection(report.wifi!),
+          const SizedBox(height: 16),
+        ],
         for (final device in report.flagged) ...[
           _DeviceCard(device),
           const SizedBox(height: 16),
@@ -126,6 +130,141 @@ class _DeviceCard extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+/// The Wi-Fi & router network stats: name, encryption, band — plus any Wi-Fi
+/// finding. When the platform can't read security (iOS), it says so honestly and
+/// points up the tier ladder, instead of showing a misleading "OK".
+class _WifiSection extends StatelessWidget {
+  const _WifiSection(this.wifi);
+  final WifiReport wifi;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    final o = wifi.observation;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: IEyeColors.paperDim,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.wifi, color: IEyeColors.charcoal, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(o.ssid == null ? 'Your Wi-Fi' : 'Wi-Fi · ${o.ssid}',
+                    style: text.titleLarge?.copyWith(fontSize: 18)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (!o.readable)
+            _WifiUnavailable()
+          else ...[
+            _WifiStatRow(
+              label: 'Encryption',
+              child: _EncryptionBadge(o.security),
+            ),
+            if (o.band != null)
+              _WifiStatRow(
+                label: 'Band',
+                child: Text(
+                  o.channel != null ? '${o.band}  ·  ch ${o.channel}' : o.band!,
+                  style: text.bodyMedium?.copyWith(
+                      color: IEyeColors.charcoal, fontWeight: FontWeight.w600),
+                ),
+              ),
+          ],
+          for (final f in wifi.findings) ...[
+            const Divider(height: 24, color: Color(0x22000000)),
+            _FindingBlock(f),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// The honest iOS gap — and the tier-ladder nudge.
+class _WifiUnavailable extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.help_outline, color: IEyeColors.charcoalMuted, size: 20),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            'This phone can’t check your Wi-Fi encryption — the system doesn’t '
+            'allow it. A laptop scan or the iEye box can see whether your Wi-Fi is '
+            'open or weakly encrypted.',
+            style: text.bodyMedium
+                ?.copyWith(fontSize: 14, color: IEyeColors.charcoalSoft),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WifiStatRow extends StatelessWidget {
+  const _WifiStatRow({required this.label, required this.child});
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Text(label, style: text.bodyMedium),
+          const Spacer(),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Encryption as a stat badge — factual, colour + WORD. WPA2/WPA3 read calm-teal
+/// (a fact, NOT a green "you're safe" shield); open/WEP read beacon-amber.
+class _EncryptionBadge extends StatelessWidget {
+  const _EncryptionBadge(this.security);
+  final WifiSecurity security;
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color) = switch (security) {
+      WifiSecurity.open => ('Open · no password', IEyeColors.amberDeep),
+      WifiSecurity.wep => ('WEP · broken', IEyeColors.amberDeep),
+      WifiSecurity.wpaTkip => ('WPA/TKIP · old', IEyeColors.amberDeep),
+      WifiSecurity.wpa2 => ('WPA2', IEyeColors.tealDeep),
+      WifiSecurity.wpa3 => ('WPA3', IEyeColors.tealDeep),
+      WifiSecurity.unknown => ('Unknown', IEyeColors.charcoalMuted),
+      WifiSecurity.unavailable => ('Not checked', IEyeColors.charcoalMuted),
+    };
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color, width: 1.2),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 12, fontWeight: FontWeight.w800, color: color)),
     );
   }
 }

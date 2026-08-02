@@ -23,16 +23,19 @@ class LanScanner implements NetworkScanner {
   LanScanner({
     HostProbe? probe,
     SubnetSource? subnet,
+    WifiSource? wifi,
     this.engine = const FingerprintEngine(),
     this.discoveryPorts = defaultDiscoveryPorts,
     this.maxConcurrent = 48,
     DateTime Function() now = DateTime.now,
   })  : _probe = probe ?? const SocketHostProbe(),
         _subnet = subnet ?? const InterfaceSubnetSource(),
+        _wifi = wifi ?? const UnsupportedWifiSource(),
         _now = now;
 
   final HostProbe _probe;
   final SubnetSource _subnet;
+  final WifiSource _wifi;
   final FingerprintEngine engine;
 
   /// The small set of ports whose presence tells us a host is worth a closer look
@@ -83,7 +86,16 @@ class LanScanner implements NetworkScanner {
     });
 
     reports.sort((a, b) => _octet(a.ip).compareTo(_octet(b.ip)));
-    return ScanReport(startedAt: _now(), devices: reports);
+
+    // Wi-Fi is network-level and platform-gated (unreadable on iOS). We still
+    // attach the observation so the UI can state the gap honestly.
+    final wifiObs = await _wifi.current();
+    final wifi = WifiReport(
+      observation: wifiObs,
+      findings: engine.assessWifi(wifiObs),
+    );
+
+    return ScanReport(startedAt: _now(), devices: reports, wifi: wifi);
   }
 
   static int _octet(String ip) => int.tryParse(ip.split('.').last) ?? 0;
@@ -130,6 +142,23 @@ abstract interface class HostProbe {
 /// Discovers the local IPv4 /24 prefix to sweep (e.g. "192.168.0").
 abstract interface class SubnetSource {
   Future<String?> localPrefix24();
+}
+
+/// Reads the current Wi-Fi's name/encryption. This needs a native plugin
+/// (Android: WifiManager + Location permission; iOS: no security API exists), so
+/// it is deliberately behind an interface. The default [UnsupportedWifiSource]
+/// returns "unavailable" — the honest state on iOS and until the plugin lands.
+abstract interface class WifiSource {
+  Future<WifiObservation> current();
+}
+
+/// The default: we can't read Wi-Fi yet, so say so. Never guesses "secure".
+class UnsupportedWifiSource implements WifiSource {
+  const UnsupportedWifiSource();
+
+  @override
+  Future<WifiObservation> current() async =>
+      const WifiObservation(security: WifiSecurity.unavailable);
 }
 
 /// Real probing over `dart:io`. Passive by construction: connect, read a banner,

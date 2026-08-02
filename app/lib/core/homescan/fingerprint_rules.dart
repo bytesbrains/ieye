@@ -186,6 +186,75 @@ class FingerprintEngine {
     ];
   }
 
+  /// Turn a [WifiObservation] into findings. Open/WEP/old-WPA are the ones that
+  /// bite; WPA2/WPA3 are fine (shown as a stat, never as a green all-clear).
+  /// [WifiSecurity.unavailable] yields nothing — the UI states the gap honestly.
+  List<Finding> assessWifi(WifiObservation w) {
+    switch (w.security) {
+      case WifiSecurity.open:
+        return const [
+          Finding(
+            kind: FindingKind.weakWifi,
+            severity: Severity.high,
+            verified: true, // we read the cipher directly — this one IS confirmed
+            title: 'Your Wi-Fi has no password',
+            whatItMeans:
+                'Anyone within range can join your Wi-Fi and reach the devices '
+                'on it — including your cameras — without needing anything from '
+                'you. On an open network, nearby traffic can also be read.',
+            remediation: [
+              'In your router’s app or settings, set Wi-Fi security to WPA2 or '
+                  'WPA3 and choose a strong password.',
+              'Reconnect your devices with the new password.',
+            ],
+            fixOwner: FixOwner.user,
+          ),
+        ];
+      case WifiSecurity.wep:
+        return const [
+          Finding(
+            kind: FindingKind.weakWifi,
+            severity: Severity.high,
+            verified: true,
+            title: 'Your Wi-Fi uses WEP — that’s broken',
+            whatItMeans:
+                'WEP encryption can be cracked in minutes with free tools, so the '
+                'password barely protects you. It’s effectively an open network to '
+                'anyone determined.',
+            remediation: [
+              'Switch your Wi-Fi security to WPA2 or WPA3 in the router settings.',
+              'If the router only offers WEP, it’s old — consider replacing it.',
+            ],
+            fixOwner: FixOwner.user,
+          ),
+        ];
+      case WifiSecurity.wpaTkip:
+        return const [
+          Finding(
+            kind: FindingKind.weakWifi,
+            severity: Severity.medium,
+            verified: true,
+            title: 'Your Wi-Fi uses older WPA/TKIP encryption',
+            whatItMeans:
+                'The original WPA (TKIP) has known weaknesses and is much weaker '
+                'than modern Wi-Fi security. It still has a password, but it '
+                'should be upgraded.',
+            remediation: [
+              'Set your Wi-Fi security to WPA2 (AES) or WPA3 in the router.',
+            ],
+            fixOwner: FixOwner.user,
+          ),
+        ];
+      case WifiSecurity.wpa2:
+      case WifiSecurity.wpa3:
+      case WifiSecurity.unknown:
+      case WifiSecurity.unavailable:
+        // Fine, indeterminate, or unreadable — no finding. WPA2/WPA3 are shown as
+        // a reassuring stat in the UI, not asserted here as "safe".
+        return const [];
+    }
+  }
+
   /// Pull a model string like "IPC_GK7205V200" out of a banner if present.
   String? _grepModel(String? banner) {
     if (banner == null) return null;

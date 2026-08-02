@@ -28,6 +28,13 @@ class _FakeSubnet implements SubnetSource {
   Future<String?> localPrefix24() async => prefix;
 }
 
+class _FakeWifi implements WifiSource {
+  const _FakeWifi(this.observation);
+  final WifiObservation observation;
+  @override
+  Future<WifiObservation> current() async => observation;
+}
+
 void main() {
   DateTime clock() => DateTime.utc(2026, 8, 2);
 
@@ -79,5 +86,31 @@ void main() {
     final report = await scanner.scan();
     expect(report.deviceCount, 0);
     expect(report.anyFindings, isFalse);
+  });
+
+  test('open Wi-Fi from the WifiSource folds into the report', () async {
+    final scanner = LanScanner(
+      probe: _FakeProbe(const {}, const {}, const {}),
+      subnet: const _FakeSubnet('192.168.0'),
+      wifi: const _FakeWifi(WifiObservation(security: WifiSecurity.open)),
+      now: clock,
+    );
+    final report = await scanner.scan();
+    expect(report.wifi!.findings, hasLength(1));
+    expect(report.wifi!.findings.single.severity, Severity.high);
+    // The Wi-Fi finding counts toward the report total.
+    expect(report.findingCount, 1);
+  });
+
+  test('default WifiSource is unavailable — reads as "not checked", no finding',
+      () async {
+    final scanner = LanScanner(
+      probe: _FakeProbe(const {}, const {}, const {}),
+      subnet: const _FakeSubnet('192.168.0'),
+      now: clock, // no wifi injected → UnsupportedWifiSource
+    );
+    final report = await scanner.scan();
+    expect(report.wifi!.observation.readable, isFalse);
+    expect(report.wifi!.findings, isEmpty);
   });
 }

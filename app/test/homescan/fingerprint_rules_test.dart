@@ -86,4 +86,30 @@ void main() {
       expect(r.worst, isNull);
     });
   });
+
+  group('Wi-Fi encryption rules', () {
+    Finding? only(WifiSecurity s) {
+      final f = engine.assessWifi(WifiObservation(security: s));
+      return f.isEmpty ? null : f.single;
+    }
+
+    test('open Wi-Fi is a HIGH, confirmed (we read the cipher directly)', () {
+      final f = only(WifiSecurity.open)!;
+      expect(f.severity, Severity.high);
+      expect(f.kind, FindingKind.weakWifi);
+      expect(f.verified, isTrue); // unlike inferred device findings
+    });
+
+    test('WEP is HIGH, WPA/TKIP is MEDIUM', () {
+      expect(only(WifiSecurity.wep)!.severity, Severity.high);
+      expect(only(WifiSecurity.wpaTkip)!.severity, Severity.medium);
+    });
+
+    test('WPA2/WPA3/unknown/unavailable raise nothing (no false all-clear)', () {
+      expect(only(WifiSecurity.wpa2), isNull);
+      expect(only(WifiSecurity.wpa3), isNull);
+      expect(only(WifiSecurity.unknown), isNull);
+      expect(only(WifiSecurity.unavailable), isNull);
+    });
+  });
 }

@@ -194,3 +194,37 @@ class DeviceReport {
         .reduce((a, b) => a.index <= b.index ? a : b);
   }
 }
+
+/// Wi-Fi encryption, worst → best. [unavailable] is the honest gap: iOS exposes
+/// NO Wi-Fi-security API, so on iPhone we simply cannot read this — that is
+/// reported as "can't check", never as a pass.
+enum WifiSecurity { open, wep, wpaTkip, wpa2, wpa3, unknown, unavailable }
+
+/// What we could read about the Wi-Fi the phone is on. Network-level (not tied to
+/// one host), so it rides on the [ScanReport] separately from the device list.
+class WifiObservation {
+  const WifiObservation({
+    this.ssid,
+    this.security = WifiSecurity.unavailable,
+    this.band,
+    this.channel,
+  });
+
+  /// Network name, when the platform lets us read it (needs entitlement on iOS).
+  final String? ssid;
+  final WifiSecurity security;
+
+  /// "2.4 GHz" / "5 GHz", for the stats row.
+  final String? band;
+  final int? channel;
+
+  /// False when the platform couldn't tell us the security (the iOS wall).
+  bool get readable => security != WifiSecurity.unavailable;
+}
+
+/// The Wi-Fi observation plus any findings about it.
+class WifiReport {
+  const WifiReport({required this.observation, required this.findings});
+  final WifiObservation observation;
+  final List<Finding> findings;
+}

@@ -51,5 +51,9 @@ void main() {
 
     // The funnel: at least one finding routes to a specialist.
     expect(find.text('Talk to a specialist'), findsWidgets);
+
+    // The Wi-Fi section renders with its encryption stat.
+    expect(find.textContaining('Wi-Fi'), findsWidgets);
+    expect(find.text('WPA/TKIP · old'), findsOneWidget);
   });
 }
