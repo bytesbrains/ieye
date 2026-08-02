@@ -14,9 +14,9 @@ class ScanReport {
   final WifiReport? wifi;
 
   Iterable<Finding> get _allFindings => [
-        ...devices.expand((d) => d.findings),
-        ...?wifi?.findings,
-      ];
+    ...devices.expand((d) => d.findings),
+    ...?wifi?.findings,
+  ];
 
   int get deviceCount => devices.length;
 
@@ -43,6 +43,15 @@ class ScanReport {
       if (w == null || f.severity.index < w.index) w = f.severity;
     }
     return w;
+  }
+
+  /// Findings grouped by severity — powers the exposure-by-severity overview chart.
+  Map<Severity, int> get severityCounts {
+    final counts = <Severity, int>{};
+    for (final f in _allFindings) {
+      counts[f.severity] = (counts[f.severity] ?? 0) + 1;
+    }
+    return counts;
   }
 }
 
@@ -85,7 +94,10 @@ class StubScanner implements NetworkScanner {
     return ScanReport(
       startedAt: DateTime.now(),
       devices: devices,
-      wifi: WifiReport(observation: wifiObs, findings: engine.assessWifi(wifiObs)),
+      wifi: WifiReport(
+        observation: wifiObs,
+        findings: engine.assessWifi(wifiObs),
+      ),
     );
   }
 
