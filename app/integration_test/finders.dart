@@ -29,6 +29,8 @@ Future<void> pumpApp(WidgetTester tester) async {
 }
 
 // ---- onboarding ----
+// Front foot: iEye Secure (the home scan). The welfare roles sit below it now.
+final scanMyHome = find.text('Scan my home');
 final forMyself = find.text('Set up iEye for myself');
 final forSomeone = find.text('Set up iEye for someone I care about');
 final brandLogo = find.image(const AssetImage('assets/ieye-appicon.png'));
@@ -59,6 +61,9 @@ final armButton = find.text('Start watching over me');
 /// From onboarding, pick a role and pass through the comprehension gate (ack the
 /// "found, not rescued" micro-check, then arm) to reach the home.
 Future<void> goToHomeAsMyself(WidgetTester tester) async {
+  // The welfare roles now sit below the iEye Secure hero, so scroll into view.
+  await tester.ensureVisible(forMyself);
+  await tester.pumpAndSettle();
   await tester.tap(forMyself);
   await tester.pumpAndSettle();
   await passComprehensionGate(tester);

@@ -58,9 +58,15 @@ LivenessAssessment _verdict(
 );
 
 void main() {
-  testWidgets('onboarding offers both roles (buyer ≠ watched)', (tester) async {
+  testWidgets('onboarding leads with the scan, still offers both watch roles', (
+    tester,
+  ) async {
     await tester.pumpWidget(const IEyeApp());
 
+    // Front foot: iEye Secure — the home scan is the primary action.
+    expect(find.text('Scan my home'), findsOneWidget);
+    expect(find.textContaining('A guardian for your home'), findsOneWidget);
+    // The deeper watch — both roles (buyer ≠ watched).
     expect(find.text('Set up iEye for myself'), findsOneWidget);
     expect(find.text('Set up iEye for someone I care about'), findsOneWidget);
   });
