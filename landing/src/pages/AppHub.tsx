@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Wordmark } from "../components/Brand";
 import { WaitlistCta } from "../components/WaitlistCta";
 import { ExposureCheck } from "../components/ExposureCheck";
-import { REPO_LINKS } from "../lib/repo";
+import { REPO_LINKS, APP_DOWNLOADS } from "../lib/repo";
 
 // The app hub at /app: the outside-in browser teaser + honest, per-platform
 // downloads. Windows/Linux/Android can be distributed freely; macOS + iPhone need
@@ -29,8 +29,8 @@ function detectOS(): OS {
 
 // Available now — distributable without Apple signing.
 const AVAILABLE: { os: "Windows" | "Linux" | "Android"; note: string; hint: string }[] = [
-  { os: "Windows", note: "Desktop scan", hint: "Windows may warn “unknown publisher” — choose More info → Run anyway." },
-  { os: "Linux", note: "Desktop scan", hint: "AppImage — make it executable, then run." },
+  { os: "Windows", note: "Desktop scan (.zip)", hint: "Windows may warn “unknown publisher” — choose More info → Run anyway." },
+  { os: "Linux", note: "Desktop scan (.tar.gz)", hint: "Unpack, then run the ieye executable inside." },
   { os: "Android", note: "Mobile scan (APK)", hint: "Allow the install when your browser asks." },
 ];
 
@@ -106,9 +106,7 @@ export function AppHub() {
                   </p>
                   <p className="text-sm text-charcoal-soft">{p.note}</p>
                   <a
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    href={releases}
+                    href={APP_DOWNLOADS[p.os]}
                     className="btn btn-secondary mt-3 text-sm"
                   >
                     Download
