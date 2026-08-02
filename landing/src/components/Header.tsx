@@ -2,10 +2,10 @@ import { Link } from "react-router-dom";
 import { Wordmark } from "./Brand";
 
 const NAV = [
+  { href: "#secure", label: "iEye Secure" },
   { href: "#how-it-works", label: "How it works" },
   { href: "#trust", label: "Trust & privacy" },
-  { href: "#contribute", label: "Ways to help" },
-  { href: "#transparency", label: "Transparency" },
+  { href: "#bytesbrains", label: "BytesBrains" },
 ];
 
 export function Header() {
@@ -25,20 +25,14 @@ export function Header() {
               {item.label}
             </a>
           ))}
-          <Link
-            to="/signin"
-            className="rounded-md text-base text-charcoal-soft hover:text-charcoal"
-          >
-            Sign in
+          <Link to="/app" className="btn btn-primary px-5 py-2 text-sm">
+            Scan your home
           </Link>
-          <a href="#waitlist" className="btn btn-primary px-5 py-2 text-sm">
-            Notify me
-          </a>
         </nav>
         {/* Mobile: a single clear CTA, no hamburger needed for a one-page scroll */}
-        <a href="#waitlist" className="btn btn-primary px-5 py-2 text-sm md:hidden">
-          Notify me
-        </a>
+        <Link to="/app" className="btn btn-primary px-5 py-2 text-sm md:hidden">
+          Scan your home
+        </Link>
       </div>
     </header>
   );

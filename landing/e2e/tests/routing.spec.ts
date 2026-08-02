@@ -16,19 +16,13 @@ test.describe("routing", () => {
 
   test("unknown path falls back to the public landing", async ({ page }) => {
     await page.goto("/this-route-does-not-exist");
-    await expect(page.getByRole("heading", { name: "iEye gets help to you in time." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /A guardian for your home/i })).toBeVisible();
   });
 
-  test("/account requires sign-in — redirects to /signin", async ({ page }) => {
+  test("removed account/admin routes fall back to the landing", async ({ page }) => {
+    // The signed-in account/admin space was removed with the contribution
+    // subsystem; those paths now hit the catch-all and render the landing.
     await page.goto("/account");
-    await expect(page).toHaveURL(/\/signin/);
-    await expect(page.getByRole("heading", { name: /sign in to your account/i })).toBeVisible();
-    await expect(page.getByRole("button", { name: /continue with google/i })).toBeVisible();
-  });
-
-  test("/admin without admin claim does not show the admin shell", async ({ page }) => {
-    await page.goto("/admin");
-    // Unauthenticated -> bounced to sign-in (a non-admin would land on /account).
-    await expect(page).toHaveURL(/\/signin|\/account/);
+    await expect(page.getByRole("heading", { name: /A guardian for your home/i })).toBeVisible();
   });
 });

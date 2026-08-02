@@ -94,7 +94,7 @@ export function WaysToContribute({ title }: { title?: string }) {
         <a {...EXT} href={REPO_LINKS.codeOfConduct} className="underline hover:text-charcoal">
           Code of Conduct
         </a>
-        . iEye is a public good, not a business; there is no token and no investment offer.
+        . The code is open-source (MIT); there is no iEye token and no investment offer.
       </p>
     </div>
   );

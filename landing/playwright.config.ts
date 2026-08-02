@@ -1,12 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 // E2E config for the landing app, run against the DOCKERIZED Firebase emulator
-// (start it first: `npm run e2e:up`). Two dev servers are started so we can
-// exercise both states of the build-time fiat flag:
-//   - port 5173, flag OFF  -> the default "funder interest" money panel
-//   - port 5174, flag ON   -> the live "contribute by card" path
-// Both talk to the same emulator. global-setup.ts waits for the emulator and
-// clears its data so each run starts clean.
+// (start it first: `npm run e2e:up`). One dev server on 5173. (The fiat/money
+// flag project was removed with the payments + contribution subsystem — iEye
+// takes no donations.) global-setup.ts waits for the emulator and clears it so
+// each run starts clean.
 
 const EMULATOR_ENV = {
   VITE_USE_EMULATOR: "true",
@@ -31,8 +29,7 @@ export default defineConfig({
   use: {
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    // Watchable runs: `--headed` shows the browser; E2E_SLOWMO=350 paces actions
-    // so they're visible. Both no-op in normal/CI runs.
+    // Watchable runs: `--headed` shows the browser; E2E_SLOWMO=350 paces actions.
     launchOptions: { slowMo: process.env.E2E_SLOWMO ? Number(process.env.E2E_SLOWMO) : 0 },
   },
   webServer: [
@@ -43,24 +40,11 @@ export default defineConfig({
       timeout: 120_000,
       env: EMULATOR_ENV,
     },
-    {
-      command: "npm run dev -- --host 127.0.0.1 --port 5174 --strictPort",
-      url: "http://127.0.0.1:5174",
-      reuseExistingServer: !process.env.CI,
-      timeout: 120_000,
-      env: { ...EMULATOR_ENV, VITE_FIAT_CONTRIB_ENABLED: "true" },
-    },
   ],
   projects: [
     {
       name: "landing",
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:5173" },
-      testIgnore: /fiat\.spec\.ts/,
-    },
-    {
-      name: "fiat",
-      use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:5174" },
-      testMatch: /fiat\.spec\.ts/,
     },
   ],
 });
