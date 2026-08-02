@@ -7,9 +7,9 @@ name: Release
 # WHAT'S GATED (needs the Apple Developer Program — $99/yr — one membership covers
 # both): macOS (Developer ID sign + notarize) and iOS (TestFlight/App Store).
 #   - The `macos` job only runs when repo variable APPLE_SIGNING_ENABLED == 'true'
-#     and the signing secrets are set (see TODO in that job).
+#     and the signing secrets are set (tracked in #79).
 #   - iOS is App Store only — no downloadable binary; wire TestFlight via the App
-#     Store Connect API (fastlane) as a follow-up.
+#     Store Connect API (fastlane) as a follow-up (#79).
 #
 # Trigger: push a tag like `v0.1.0`, or run manually with a version input.
 
@@ -62,7 +62,7 @@ jobs:
       - run: flutter pub get
       # NOTE: without a release keystore this is signed with the debug key (still
       # sideloadable). For store-grade signing, add a keystore via secrets and a
-      # signingConfig in android/app/build.gradle. TODO before public release.
+      # signingConfig in android/app/build.gradle. TODO(#79): before public release.
       - run: flutter build apk --release
       - name: Upload APK to the release
         env:
@@ -115,7 +115,7 @@ jobs:
       - run: flutter pub get
       - run: flutter build windows --release
       # Unsigned: Windows SmartScreen will warn until an OV/EV code-signing cert is
-      # added. Installable via "More info -> Run anyway". TODO: sign for production.
+      # added. Installable via "More info -> Run anyway". TODO(#79): sign for production.
       - name: Package + upload
         shell: pwsh
         env:
@@ -144,7 +144,7 @@ jobs:
       - run: flutter config --enable-macos-desktop
       - run: flutter pub get
       - run: flutter build macos --release
-      # TODO (needs Apple Developer Program):
+      # TODO(#79) (needs Apple Developer Program):
       #   secrets: APPLE_CERT_P12 (base64), APPLE_CERT_PASSWORD, APPLE_TEAM_ID,
       #            APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD (or notarytool API key).
       #   1. import the Developer ID cert into a temp keychain,
@@ -156,5 +156,5 @@ jobs:
         run: echo "Built unsigned macOS app. Add signing+notarization secrets to publish a .dmg."
 
   # iOS is App Store only — there is no downloadable binary. Wire TestFlight via
-  # the App Store Connect API (fastlane pilot) as a separate follow-up once the
-  # Apple Developer Program membership exists.
+  # the App Store Connect API (fastlane pilot) as a separate follow-up (#79) once
+  # the Apple Developer Program membership exists.

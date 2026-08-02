@@ -17,6 +17,9 @@ function detectOS(): OS {
   if (typeof navigator === "undefined") return null;
   const ua = navigator.userAgent;
   if (/iPhone|iPad|iPod/.test(ua)) return "iOS";
+  // iPadOS Safari defaults to "desktop mode" and reports a Mac UA — but real Macs
+  // aren't touchscreens, so a touch-capable "Macintosh" is an iPad.
+  if (/Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1) return "iOS";
   if (/Android/.test(ua)) return "Android";
   if (/Macintosh|Mac OS X/.test(ua)) return "macOS";
   if (/Windows/.test(ua)) return "Windows";
