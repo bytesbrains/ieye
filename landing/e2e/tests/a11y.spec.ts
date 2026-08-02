@@ -5,7 +5,7 @@ import AxeBuilder from "@axe-core/playwright";
 // WCAG 2.0/2.1 A/AA violations (the levels that actually block users) — contrast,
 // labels, roles, names. Minor/moderate findings are reported by the tool but not
 // failed here, to keep the gate meaningful rather than noisy.
-const PAGES = ["/", "/privacy", "/terms", "/signin"];
+const PAGES = ["/", "/app", "/privacy", "/terms"];
 
 for (const path of PAGES) {
   test(`a11y: ${path} has no serious or critical violations`, async ({ page }) => {

@@ -1,187 +1,31 @@
 rules_version = '2';
 
-// iEye — Phase-1.5 web-app Firestore security rules.
+// iEye — web-app Firestore security rules.
 //
-// Author: iEye Security.
-// Refs: web-app architecture #43, contribution model + opt-in-named decision #36,
-//       data-controller / legal posture #38.
-//
-// SECURITY MODEL (read this before changing anything below)
-// ---------------------------------------------------------
-// Three surfaces: public (no auth) / user (Google auth) / admin (custom claim).
-//
-// 1. Default deny. The final `match /{document=**}` block denies everything not
-//    explicitly allowed above. Every collection is whitelisted, never blacklisted.
-//
-// 2. Admin is a CUSTOM CLAIM, never a Firestore field. `isAdmin()` reads
-//    `request.auth.token.admin`, which can ONLY be minted by the Firebase Admin
-//    SDK (a secured, privileged Cloud Function). A client can never write its own
-//    claim, so a compromised frontend cannot self-elevate. There is deliberately
-//    NO `role`/`admin` field anywhere in the `users` schema that rules trust — if
-//    one is ever added for display purposes, rules MUST ignore it for authz.
-//
-// 3. Least privilege per collection:
-//      users               — owner reads/writes own doc only; cannot set authz fields.
-//      contributions       — clients NEVER write (money is backend-only / ledger
-//                            integrity); owner reads own only; admin reads/manages all.
-//      publicSupporters    — world-readable PROJECTION of ONLY consented public fields;
-//                            backend/admin writes only. Private docs are never exposed
-//                            through rules — the public wall reads this projection.
-//      contributorRequests — owner creates + reads own; admin reads/updates all.
-//
-// 4. Rules protect data even if the frontend is fully compromised. Anything a
-//    client must NOT be able to do (write money, grant itself a role, change the
-//    immutable owner of a doc) is blocked here, not just hidden in the UI.
-//
-// 5. What rules CANNOT enforce is documented in firestore-tests/THREAT-MODEL.md and
-//    must be enforced by trusted backend / Cloud Functions:
-//      - amount/asset correctness, payment reconciliation, AML/sanctions screening (#38 §5)
-//      - consent-log integrity (notice version + timestamp) for the supporter wall (#38 §4)
-//      - minting/revoking the `admin` custom claim
-//      - building the publicSupporters projection from consented users + contributions
-//
-//    Backend-only collections (NO allow rule — held shut by the default-deny
-//    block, written exclusively via the Admin SDK): adminAudit, mail,
-//    consentLog (tamper-evident consent record), supporterIndex (private
-//    uid -> public-projection-id map; keeps the public wall non-correlatable).
+// The payments + contribution subsystem was removed (iEye takes no donations),
+// so the contributions / publicSupporters / contributorRequests collections and
+// the admin custom-claim model are gone. What remains is the per-user profile /
+// early-access waitlist doc (captured from the Google sign-in), plus default-deny
+// for everything else. Rules protect data even if the frontend is fully
+// compromised: a client can only ever touch its own user doc.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ---- helpers --------------------------------------------------------
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Admin == custom claim only. NEVER a Firestore field.
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
-    }
-
     function isOwner(uid) {
-      return isSignedIn() && request.auth.uid == uid;
+      return request.auth != null && request.auth.uid == uid;
     }
 
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
-
-    // True when the request does NOT attempt to introduce any
-    // authorization-bearing field into a user-writable document.
-    // Defense in depth: even though admin authz comes from custom claims and
-    // not from these fields, we refuse to let clients persist tokens that a
-    // future, careless rule or backend might mistake for authz.
-    function hasNoPrivilegeEscalation() {
-      return !incoming().keys().hasAny(['admin', 'role', 'roles', 'isAdmin', 'claims', 'customClaims']);
-    }
-
-    // The amount opt-in was removed (#36, "named ≠ priced"): the wall is
-    // name-only and the projection is structurally incapable of carrying an
-    // amount. Enforce that structurally at the write boundary too — a client may
-    // NOT (re)introduce or change `optInDisplayAmount`, so the dead field can
-    // never come back as a live signal. We deliberately ALLOW an unchanged
-    // carry-through of a legacy copy on already-deployed docs (incoming ==
-    // existing) so a name/consent edit isn't bricked by inert old data; those
-    // copies are inert (nothing reads them) and are swept by the one-time
-    // cleanup script (functions/scripts/purge-legacy-amount.mjs).
-    function noLegacyAmountOptIn() {
-      return !incoming().keys().hasAny(['optInDisplayAmount'])
-        || (resource != null
-            && existing().keys().hasAny(['optInDisplayAmount'])
-            && incoming().optInDisplayAmount == existing().optInDisplayAmount);
-    }
-
-    // Ordinal of a contributorRequest status, for forward-only transitions.
-    function statusRank(s) {
-      return s == 'invited' ? 2 : (s == 'vetted' ? 1 : 0);
-    }
-
-    // ---- users ----------------------------------------------------------
-    // Profile, opt-in-named flags, consent state. One doc per uid.
-    // Owner reads/writes ONLY their own doc. Admin may read/manage all
-    // (e.g. support, account closure). No client may set authz fields.
+    // users — profile + early-access waitlist (name/email/consent), one doc per
+    // uid. The owner reads/writes ONLY their own doc; no one can read or write
+    // another user's. (There are no authz fields here that any rule trusts, so
+    // there is nothing to escalate.)
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
-
-      // Create: only the owner, only their own doc, no privilege fields, and no
-      // resurrected `optInDisplayAmount` (the wall is name-only; #36).
-      allow create: if isOwner(uid) && hasNoPrivilegeEscalation() && noLegacyAmountOptIn();
-
-      // Update: owner may edit their own profile / opt-in-named / consent,
-      // but may NOT introduce authz fields, may NOT (re)introduce or change the
-      // removed amount opt-in, and may NOT change the doc's identity (uid is the
-      // doc id — there is no mutable owner field here).
-      allow update: if isOwner(uid) && hasNoPrivilegeEscalation() && noLegacyAmountOptIn();
-
-      // Owner may delete their own profile (right-to-erasure self-service);
-      // admin may delete (account closure). Backend handles cascade cleanup.
-      allow delete: if isOwner(uid) || isAdmin();
-
-      // Admin write path (support edits / account management).
-      allow write: if isAdmin();
+      allow read, create, update, delete: if isOwner(uid);
     }
 
-    // ---- contributions --------------------------------------------------
-    // Money / in-kind / labor records. Source of truth for the ledger.
-    // CLIENTS NEVER WRITE — all writes come from trusted backend / Cloud
-    // Functions / Admin SDK (which bypass rules entirely). This guarantees
-    // a client cannot fabricate, inflate, or alter a contribution amount,
-    // mark someone else's contribution public, or rewrite the ledger.
-    // Owner may read ONLY their own contributions; admin may read all.
-    // Nobody reads another user's private contribution via rules.
-    match /contributions/{contributionId} {
-      allow read: if isAdmin() || (isSignedIn() && existing().ownerUid == request.auth.uid);
-
-      // No client writes of any kind. (Admin SDK / Functions bypass rules.)
-      allow create, update, delete: if false;
-    }
-
-    // ---- publicSupporters ----------------------------------------------
-    // Backend-populated PROJECTION containing ONLY the consented display name
-    // (name-only by design — the wall never carries an amount; #36 "named ≠
-    // priced"). World-readable BY DESIGN — it holds nothing private, so rules never
-    // have to crack open a private `users`/`contributions` doc to render the
-    // public wall. Writable ONLY by backend/admin (which build it from the
-    // consent state + logged consent in #38 §4). A client cannot inject
-    // itself onto the public wall.
-    match /publicSupporters/{supporterId} {
-      allow read: if true;                       // public supporter wall
-      allow create, update, delete: if isAdmin(); // Admin SDK / Functions also bypass
-    }
-
-    // ---- contributorRequests -------------------------------------------
-    // request -> vetted -> invited flow (#36). A user may create their own
-    // request and read it back; status is moved forward only by admins.
-    // The requester sets ownerUid to themselves and may only ever start at
-    // status 'requested'. They cannot read other people's requests, and they
-    // cannot self-promote to vetted/invited.
-    match /contributorRequests/{requestId} {
-      allow read: if isAdmin() || (isSignedIn() && existing().ownerUid == request.auth.uid);
-
-      // Create: owner only, must own the request, must start at 'requested',
-      // and may not smuggle in authz fields.
-      allow create: if isSignedIn()
-                    && incoming().ownerUid == request.auth.uid
-                    && incoming().status == 'requested'
-                    && hasNoPrivilegeEscalation();
-
-      // Only admins update a request, and even an admin client may ONLY move
-      // status forward (requested -> vetted -> invited) and may NEVER rewrite
-      // the immutable owner. This is now a STRUCTURAL guarantee, not just trust
-      // in the admin UI — a compromised admin session still can't regress a
-      // status or reassign a request to another person. (The Admin SDK / the
-      // invitation Function bypass rules and own the invitedAt stamp.)
-      allow update: if isAdmin()
-                    && incoming().ownerUid == existing().ownerUid
-                    && statusRank(incoming().status) >= statusRank(existing().status);
-
-      allow delete: if isAdmin();
-    }
-
-    // ---- DEFAULT DENY ---------------------------------------------------
-    // Anything not matched above is denied for everyone (clients). Trusted
-    // backend via the Admin SDK bypasses rules entirely and is governed by
-    // the threat model, not by this file.
+    // Everything else is denied for all clients. Trusted backend via the Admin
+    // SDK bypasses rules entirely and is governed by its own threat model.
     match /{document=**} {
       allow read, write: if false;
     }

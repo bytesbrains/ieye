@@ -25,12 +25,6 @@ export function Header() {
               {item.label}
             </a>
           ))}
-          <Link
-            to="/signin"
-            className="rounded-md text-base text-charcoal-soft hover:text-charcoal"
-          >
-            Sign in
-          </Link>
           <Link to="/app" className="btn btn-primary px-5 py-2 text-sm">
             Scan your home
           </Link>

@@ -53,8 +53,9 @@ export function AppHub() {
           runs on your own device — install it below. Or take a quick look from your browser first.
         </p>
 
-        {/* Outside-in browser teaser — interactive, honest, free. */}
-        <section className="mt-10 rounded-2xl border-2 border-charcoal/10 bg-paper-dim p-7">
+        {/* Outside-in browser teaser — interactive, honest, free. bg-paper (not
+            paper-dim) so the teal overline clears WCAG AA contrast. */}
+        <section className="mt-10 rounded-2xl border-2 border-charcoal/10 bg-paper p-7">
           <p className="text-sm font-semibold uppercase tracking-wide text-teal-deep">
             Quick check — from your browser
           </p>
@@ -86,7 +87,7 @@ export function AppHub() {
                     <p className="text-lg font-semibold text-charcoal">
                       {p.os}
                       {recommended && (
-                        <span className="ml-2 align-middle text-xs font-semibold uppercase tracking-wide text-amber-deep">
+                        <span className="ml-2 inline-block rounded-full bg-charcoal px-2 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-paper">
                           For you
                         </span>
                       )}

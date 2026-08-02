@@ -5,24 +5,13 @@ import App from "./App";
 import { Spinner } from "./components/app/Spinner";
 import "./index.css";
 
-// The public landing (/) ships in the main bundle — fast, no Firebase.
-// Everything auth'd (which pulls in Firebase + the auth context) is lazy-loaded
-// so a first-time visitor to the landing page never downloads Firebase.
-const AuthShell = lazy(() => import("./auth/AuthShell"));
-
-// Designer-only #36 artifact — split into its own chunk so the landing page's
-// main bundle never carries the wall components or their mock data.
-const WallPreview = lazy(() =>
-  import("./pages/WallPreview").then((m) => ({ default: m.WallPreview }))
-);
-
-// The app hub (/app) — install links + early-access waitlist. Its own chunk so
-// the landing bundle stays lean; Firebase only enters on a real waitlist click.
+// The public landing (/) ships in the main bundle — fast, no Firebase. The app
+// hub (/app) and legal pages are their own chunks; Firebase enters only on a real
+// waitlist sign-in click. (The signed-in account/admin space was removed with the
+// payments + contribution subsystem — iEye takes no donations.)
 const AppHub = lazy(() =>
   import("./pages/AppHub").then((m) => ({ default: m.AppHub }))
 );
-
-// Published legal pages — own chunks, no Firebase.
 const Privacy = lazy(() =>
   import("./pages/Privacy").then((m) => ({ default: m.Privacy }))
 );
@@ -43,13 +32,11 @@ function Lazy({ children }: { children: React.ReactNode }) {
 }
 
 // Routes:
-//   /        -> public landing (Phase 1, unchanged, no auth, no Firebase)
-//   /signin  -> Google sign-in        (lazy, behind AuthProvider)
-//   /account -> signed-in user space  (lazy, RequireAuth)
-//   /admin   -> admin shell           (lazy, RequireAdmin — admin custom claim)
+//   /        -> public landing (no auth, no Firebase)
+//   /app     -> the app hub — exposure teaser + install links + early-access waitlist
+//   /privacy, /terms -> published legal pages (own chunks, no Firebase)
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
-  // The app hub — install links + early-access waitlist (lazy, its own chunk).
   {
     path: "/app",
     element: (
@@ -58,16 +45,6 @@ const router = createBrowserRouter([
       </Lazy>
     ),
   },
-  // Designer comparison artifact for #36 — lazy-loaded (its own chunk, no Firebase).
-  {
-    path: "/wall-preview",
-    element: (
-      <Lazy>
-        <WallPreview />
-      </Lazy>
-    ),
-  },
-  // Published legal pages — lazy, no Firebase.
   {
     path: "/privacy",
     element: (
@@ -81,30 +58,6 @@ const router = createBrowserRouter([
     element: (
       <Lazy>
         <Terms />
-      </Lazy>
-    ),
-  },
-  {
-    path: "/signin",
-    element: (
-      <Lazy>
-        <AuthShell view="signin" />
-      </Lazy>
-    ),
-  },
-  {
-    path: "/account",
-    element: (
-      <Lazy>
-        <AuthShell view="account" />
-      </Lazy>
-    ),
-  },
-  {
-    path: "/admin",
-    element: (
-      <Lazy>
-        <AuthShell view="admin" />
       </Lazy>
     ),
   },
