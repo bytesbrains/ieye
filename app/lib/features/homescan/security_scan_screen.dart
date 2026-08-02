@@ -33,12 +33,23 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
   Future<void> _runScan() async {
     if (!_consented) return;
     setState(() => _scanning = true);
-    final report = await widget.scanner.scan();
-    if (!mounted) return;
-    setState(() {
-      _report = report;
-      _scanning = false;
-    });
+    try {
+      final report = await widget.scanner.scan();
+      if (!mounted) return;
+      setState(() {
+        _report = report;
+        _scanning = false;
+      });
+    } catch (_) {
+      // Never leave the spinner stuck — recover to the intro and say so plainly.
+      if (!mounted) return;
+      setState(() => _scanning = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The scan couldn’t finish. Please try again.'),
+        ),
+      );
+    }
   }
 
   @override
@@ -48,8 +59,10 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
         backgroundColor: IEyeColors.paper,
         foregroundColor: IEyeColors.charcoal,
         elevation: 0,
-        title: const Text('Home Security Scan',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: const Text(
+          'Home Security Scan',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
       ),
       body: SafeArea(
         top: false,
@@ -58,15 +71,12 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
           child: _scanning
               ? const _Scanning()
               : _report == null
-                  ? _Intro(
-                      consented: _consented,
-                      onConsentChanged: (v) => setState(() => _consented = v),
-                      onScan: _runScan,
-                    )
-                  : _Results(
-                      report: _report!,
-                      onRescan: _runScan,
-                    ),
+              ? _Intro(
+                  consented: _consented,
+                  onConsentChanged: (v) => setState(() => _consented = v),
+                  onScan: _runScan,
+                )
+              : _Results(report: _report!, onRescan: _runScan),
         ),
       ),
     );
@@ -93,11 +103,16 @@ class _Intro extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 8),
-        const Icon(Icons.wifi_find_outlined,
-            color: IEyeColors.tealDeep, size: 48),
+        const Icon(
+          Icons.wifi_find_outlined,
+          color: IEyeColors.tealDeep,
+          size: 48,
+        ),
         const SizedBox(height: 20),
-        Text('Look for exposed devices in your home',
-            style: text.headlineSmall?.copyWith(fontSize: 26)),
+        Text(
+          'Look for exposed devices in your home',
+          style: text.headlineSmall?.copyWith(fontSize: 26),
+        ),
         const SizedBox(height: 14),
         Text(
           'iEye can look at the devices on your Wi-Fi and flag cameras or gadgets '
@@ -119,15 +134,20 @@ class _Intro extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.lock_outline,
-                color: IEyeColors.charcoalMuted, size: 18),
+            const Icon(
+              Icons.lock_outline,
+              color: IEyeColors.charcoalMuted,
+              size: 18,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Your phone may ask to find devices on your local network — that’s '
                 'this scan. Nothing it finds ever leaves this phone.',
                 style: text.bodyMedium?.copyWith(
-                    fontSize: 14, color: IEyeColors.charcoalMuted),
+                  fontSize: 14,
+                  color: IEyeColors.charcoalMuted,
+                ),
               ),
             ),
           ],
@@ -146,31 +166,43 @@ class _ConsentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Material(
-      color: IEyeColors.paperDim,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
+    return Semantics(
+      container: true,
+      checked: value,
+      child: Material(
+        color: IEyeColors.paperDim,
         borderRadius: BorderRadius.circular(14),
-        onTap: () => onChanged(!value),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Checkbox(
-                value: value,
-                onChanged: (v) => onChanged(v ?? false),
-                activeColor: IEyeColors.amberDeep,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  'This is my own home network, and I’m allowed to scan it.',
-                  style: text.bodyMedium
-                      ?.copyWith(fontSize: 15, color: IEyeColors.charcoal),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          // The whole row is the ONE tap target. The checkbox is display-only
+          // (IgnorePointer) so a tap on it passes through here — no double toggle.
+          onTap: () => onChanged(!value),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                IgnorePointer(
+                  child: ExcludeSemantics(
+                    child: Checkbox(
+                      value: value,
+                      onChanged: (_) {},
+                      activeColor: IEyeColors.amberDeep,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'This is my own home network, and I’m allowed to scan it.',
+                    style: text.bodyMedium?.copyWith(
+                      fontSize: 15,
+                      color: IEyeColors.charcoal,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -189,15 +221,21 @@ class _Scanning extends StatelessWidget {
         children: [
           const CircularProgressIndicator(color: IEyeColors.amberDeep),
           const SizedBox(height: 28),
-          Text('Looking at the devices on your network…',
-              textAlign: TextAlign.center,
-              style: text.titleLarge?.copyWith(fontSize: 19)),
+          Text(
+            'Looking at the devices on your network…',
+            textAlign: TextAlign.center,
+            style: text.titleLarge?.copyWith(fontSize: 19),
+          ),
           const SizedBox(height: 10),
-          Text('This stays on your phone. It only reads what each device '
-              'volunteers — it never signs in.',
-              textAlign: TextAlign.center,
-              style: text.bodyMedium?.copyWith(
-                  fontSize: 14, color: IEyeColors.charcoalMuted)),
+          Text(
+            'This stays on your phone. It only reads what each device '
+            'volunteers — it never signs in.',
+            textAlign: TextAlign.center,
+            style: text.bodyMedium?.copyWith(
+              fontSize: 14,
+              color: IEyeColors.charcoalMuted,
+            ),
+          ),
         ],
       ),
     );
@@ -222,12 +260,15 @@ class _Results extends StatelessWidget {
             foregroundColor: IEyeColors.charcoal,
             side: const BorderSide(color: IEyeColors.charcoalMuted),
             minimumSize: const Size.fromHeight(52),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
           icon: const Icon(Icons.refresh),
-          label: const Text('Scan again',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+          label: const Text(
+            'Scan again',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
         ),
       ],
     );

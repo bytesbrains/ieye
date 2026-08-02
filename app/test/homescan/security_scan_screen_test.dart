@@ -20,7 +20,7 @@ void main() {
     final button = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(button.onPressed, isNull);
 
-    await tester.tap(find.byType(Checkbox));
+    await tester.tap(find.textContaining("my own home network"));
     await tester.pump();
 
     final enabled = tester.widget<FilledButton>(find.byType(FilledButton));
@@ -37,7 +37,7 @@ void main() {
     expect(find.textContaining('can’t promise your home is safe'), findsWidgets);
 
     // Affirm ownership, then scan.
-    await tester.tap(find.byType(Checkbox));
+    await tester.tap(find.textContaining("my own home network"));
     await tester.pump();
     await tester.tap(find.text('Scan my network'));
     await tester.pumpAndSettle();
