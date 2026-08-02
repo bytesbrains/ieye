@@ -188,6 +188,45 @@ void main() {
     });
   });
 
+  group('mDNS identity — the device announces what it is', () {
+    test('a _googlecast service classifies a media device with NO open ports', () {
+      // The whole point of mDNS: a speaker that answers no TCP port is still found
+      // and correctly classified from what it broadcasts.
+      final r = engine.assess(const DeviceObservation(
+        ip: '192.168.0.55',
+        openPorts: {},
+        mdnsName: 'Kitchen Speaker',
+        mdnsServices: {'_googlecast._tcp'},
+      ));
+      expect(r.deviceClass, DeviceClass.mediaDevice);
+      expect(r.observation.mdnsName, 'Kitchen Speaker');
+    });
+
+    test('_ipp → printer, _smb → NAS, _home-assistant → hub', () {
+      DeviceClass cls(String svc) => engine
+          .assess(DeviceObservation(ip: '192.168.0.9', mdnsServices: {svc}))
+          .deviceClass;
+      expect(cls('_ipp._tcp'), DeviceClass.printer);
+      expect(cls('_smb._tcp'), DeviceClass.nas);
+      expect(cls('_home-assistant._tcp'), DeviceClass.smartHub);
+    });
+
+    test('mDNS never masks the vulnerable XM camera family', () {
+      // A camera that also advertises _rtsp must still get its CRITICAL findings —
+      // the name must not short-circuit the family fingerprint.
+      final r = engine.assess(const DeviceObservation(
+        ip: '192.168.0.148',
+        openPorts: {80, 554, 8899, 34567},
+        httpServerBanner: 'IPC_GK7205V200_G4F_S38',
+        mdnsName: 'Front Door Cam',
+        mdnsServices: {'_rtsp._tcp'},
+      ));
+      expect(r.deviceClass, DeviceClass.ipCamera);
+      expect(r.worst, Severity.critical);
+      expect(r.observation.mdnsName, 'Front Door Cam'); // name still available
+    });
+  });
+
   group('Cross-cutting exposures (any host, Mirai-class killers)', () {
     test('open Telnet (23) is HIGH — the botnet pattern — on any host', () {
       final r = engine.assess(

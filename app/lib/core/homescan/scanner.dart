@@ -145,25 +145,46 @@ class StubScanner implements NetworkScanner {
       openPorts: {80, 554, 37777},
       httpServerBanner: 'DVR-Webs',
     ),
-    // A NAS holding the household's files — Synology DSM (5000/5001) + SMB.
+    // A NAS holding the household's files — Synology DSM (5000/5001) + SMB, and
+    // it announces itself over mDNS so the report can show its real name.
     DeviceObservation(
       ip: '192.168.0.20',
       openPorts: {80, 443, 445, 5000, 5001},
       httpServerBanner: 'Synology DiskStation',
+      mdnsName: 'DiskStation',
+      mdnsServices: {'_smb._tcp', '_afpovertcp._tcp'},
     ),
-    // A network printer — raw print (9100) + JetDirect web UI.
+    // A network printer — raw print (9100) + JetDirect web UI; named via mDNS.
     DeviceObservation(
       ip: '192.168.0.30',
       openPorts: {80, 161, 9100},
       httpServerBanner: 'HP JetDirect',
+      mdnsName: 'HP OfficeJet Pro',
+      mdnsServices: {'_ipp._tcp', '_printer._tcp'},
     ),
-    // A cheap Android TV box with the ADB debug bridge (5555) left wide open.
-    DeviceObservation(ip: '192.168.0.40', openPorts: {8009, 5555}),
+    // A cheap Android TV box with the ADB debug bridge (5555) left wide open;
+    // mDNS gives it a friendly name.
+    DeviceObservation(
+      ip: '192.168.0.40',
+      openPorts: {8009, 5555},
+      mdnsName: 'Living Room TV',
+      mdnsServices: {'_googlecast._tcp'},
+    ),
     // A smart-home hub (Home Assistant) that controls the house.
     DeviceObservation(
       ip: '192.168.0.50',
       openPorts: {8123},
       httpServerBanner: 'Home Assistant',
+      mdnsName: 'Home Assistant',
+      mdnsServices: {'_home-assistant._tcp'},
+    ),
+    // A speaker that answers NO scan port — found and classified only because it
+    // broadcasts its name + service over mDNS (the whole point of adding mDNS).
+    DeviceObservation(
+      ip: '192.168.0.55',
+      openPorts: {},
+      mdnsName: 'Kitchen Speaker',
+      mdnsServices: {'_googlecast._tcp'},
     ),
     // A little home server left wide open — plaintext Telnet + a no-auth database.
     DeviceObservation(ip: '192.168.0.70', openPorts: {23, 6379}),

@@ -65,6 +65,14 @@ class FingerprintEngine {
   (DeviceClass, String?, String?) _classify(DeviceObservation obs) {
     final banner = (obs.httpServerBanner ?? '').toLowerCase();
     final magic = (obs.rtspMediaMagic ?? '').toLowerCase();
+
+    // mDNS service types are the strongest, most honest identity signal — the
+    // device announces what it is — so consult them before port/banner heuristics.
+    // Camera services return null here and fall through to the XM/RTSP tells
+    // below, which carry the specific vulnerable-family findings a name can't.
+    final byMdns = _classifyByService(obs);
+    if (byMdns != null) return (byMdns, null, null);
+
     final isXmFamily =
         _xmSofiaPorts.every(obs.hasPort) || magic.startsWith(_imkhMagicHex);
 
@@ -137,6 +145,42 @@ class FingerprintEngine {
     }
 
     return (DeviceClass.unknown, obs.macVendor, null);
+  }
+
+  /// Classify a device purely from the mDNS service types it advertises — the
+  /// device's own declaration of what it is. Returns null when no service type is
+  /// a confident tell (the caller then falls back to port/banner heuristics).
+  /// Camera services are intentionally left to the XM/RTSP path, which carries the
+  /// vulnerable-family findings.
+  DeviceClass? _classifyByService(DeviceObservation obs) {
+    if (obs.hasService('_googlecast') ||
+        obs.hasService('_airplay') ||
+        obs.hasService('_raop') ||
+        obs.hasService('_roku') ||
+        obs.hasService('androidtvremote') ||
+        obs.hasService('_spotify-connect')) {
+      return DeviceClass.mediaDevice;
+    }
+    if (obs.hasService('_ipp') ||
+        obs.hasService('_printer') ||
+        obs.hasService('_pdl-datastream') ||
+        obs.hasService('_scanner') ||
+        obs.hasService('_uscan')) {
+      return DeviceClass.printer;
+    }
+    if (obs.hasService('_smb') ||
+        obs.hasService('_afpovertcp') ||
+        obs.hasService('_nfs') ||
+        obs.hasService('_adisk')) {
+      return DeviceClass.nas;
+    }
+    if (obs.hasService('_hue') ||
+        obs.hasService('_home-assistant') ||
+        obs.hasService('_homekit') ||
+        obs.hasService('_hap')) {
+      return DeviceClass.smartHub;
+    }
+    return null;
   }
 
   /// Camera findings. The two big ones are INFERRED from the family, matching the

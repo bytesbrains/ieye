@@ -153,6 +153,8 @@ class DeviceObservation {
     this.rtspServerBanner,
     this.rtspMediaMagic,
     this.macVendor,
+    this.mdnsName,
+    this.mdnsServices = const {},
   });
 
   final String ip;
@@ -175,7 +177,22 @@ class DeviceObservation {
   /// OUI-derived vendor from the MAC, when the platform exposes the ARP entry.
   final String? macVendor;
 
+  /// The friendly name a device advertises over mDNS/Bonjour (e.g. "Living Room
+  /// TV", "DiskStation"). Passive — devices broadcast this; we only listen. Null
+  /// when nothing was heard for this host.
+  final String? mdnsName;
+
+  /// The mDNS service types a device announces (e.g. `_googlecast._tcp`,
+  /// `_ipp._tcp`). A strong, honest identity signal: the device says what it is.
+  final Set<String> mdnsServices;
+
   bool hasPort(int p) => openPorts.contains(p);
+
+  /// True if any advertised mDNS service type contains [needle] (case-insensitive).
+  bool hasService(String needle) {
+    final n = needle.toLowerCase();
+    return mdnsServices.any((s) => s.toLowerCase().contains(n));
+  }
 }
 
 /// A single thing the user should know, with plain-language meaning and a fix.

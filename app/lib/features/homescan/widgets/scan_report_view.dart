@@ -985,7 +985,9 @@ IconData _deviceIcon(DeviceClass c) => switch (c) {
   DeviceClass.unknown => Icons.help_outline,
 };
 
-String _deviceTitle(DeviceReport d) => switch (d.deviceClass) {
+/// The generic name for a device class — the fallback title, and the type label
+/// shown in the subtitle when a device advertises its own friendly mDNS name.
+String _classLabel(DeviceClass c) => switch (c) {
   DeviceClass.ipCamera => 'Camera',
   DeviceClass.nvr => 'Video recorder',
   DeviceClass.router => 'Router',
@@ -999,8 +1001,18 @@ String _deviceTitle(DeviceReport d) => switch (d.deviceClass) {
   DeviceClass.unknown => 'Unknown device',
 };
 
+/// Prefer the device's own advertised name (mDNS/Bonjour) — "Living Room TV"
+/// reads far better than "TV / streaming device" — falling back to the class.
+String _deviceTitle(DeviceReport d) {
+  final name = d.observation.mdnsName?.trim();
+  return (name != null && name.isNotEmpty) ? name : _classLabel(d.deviceClass);
+}
+
 String _deviceSubtitle(DeviceReport d) {
+  final name = d.observation.mdnsName?.trim();
   final parts = <String>[
+    // When the title is the friendly name, still say what kind of thing it is.
+    if (name != null && name.isNotEmpty) _classLabel(d.deviceClass),
     if (d.vendorFamily != null) d.vendorFamily!,
     if (d.model != null) d.model!,
     d.ip,
