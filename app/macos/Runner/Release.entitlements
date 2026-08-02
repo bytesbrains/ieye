@@ -8,5 +8,8 @@
 	     Without this the App Sandbox blocks all sockets and the scan finds nothing. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
+	<!-- Voice-to-text for a specialist-request note (used only while speaking). -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
 </dict>
 </plist>

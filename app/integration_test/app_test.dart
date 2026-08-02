@@ -7,6 +7,7 @@
 // Each test asserts a *product guardrail*, not just "the screen rendered" —
 // e.g. honest coverage (no fake green shield), going-dark tells the circle, etc.
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:ieye/core/homescan/scanner.dart';
@@ -144,6 +145,48 @@ void main() {
       expect(find.text('CRITICAL'), findsWidgets);
       expect(carScopeNote, findsWidgets);
       expect(fakeSafeShield, findsNothing);
+    });
+  });
+
+  group('talk to a specialist (the support request)', () {
+    testWidgets('scan report → sign in → submit a request', (tester) async {
+      final repo = FakeSupportRepo();
+      await pumpApp(
+        tester,
+        scanner: const StubScanner(settleDelay: Duration.zero),
+        auth: FakeAuth(),
+        repo: repo,
+      );
+      await goToScanReport(tester);
+
+      // Open the request flow from the report's specialist CTA. Don't
+      // pumpAndSettle past here: the report's pulsing critical chip stays mounted
+      // behind the pushed route, so pump the transitions explicitly.
+      await tester.ensureVisible(talkToSpecialist.first);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(talkToSpecialist.first);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The sign-in gate → sign in with Google (fake) → the form.
+      expect(supportSignInHeadline, findsOneWidget);
+      await tester.tap(continueWithGoogle);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      expect(supportFormHeadline, findsOneWidget);
+
+      // Fill the callback number and send — the request reaches the repository.
+      await tester.enterText(find.byType(TextField).first, '9876543210');
+      await tester.pump();
+      await tester.ensureVisible(sendRequest);
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(sendRequest);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(requestSent, findsOneWidget);
+      expect(repo.request, isNotNull);
+      expect(repo.request!.callbackNumber, '9876543210');
     });
   });
 }

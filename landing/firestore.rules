@@ -33,6 +33,35 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && hasNoAuthzFields();
     }
 
+    // support_requests — a signed-in user files a request for professional help
+    // from iEye Secure (a callback number/time, an optional note, and — only if
+    // they opted in — a scan summary + timezone/area). Write-once and owner-scoped:
+    // a client may CREATE its own request (userId must equal its uid, no authz
+    // fields) but can NEVER read the queue or alter a request. The BytesBrains team
+    // reads/triages via the Admin SDK / console (rules don't apply to it).
+    //
+    // The shape is pinned (key allowlist + size bounds) so a hostile client can't
+    // stuff arbitrary keys or megabyte blobs into the queue. status is forced to
+    // 'new' at create and unwritable after — triage must still treat every
+    // client-written field as untrusted input.
+    match /support_requests/{id} {
+      allow create: if isOwner(request.resource.data.userId)
+                    && hasNoAuthzFields()
+                    && request.resource.data.keys().hasOnly([
+                         'userId', 'userName', 'userEmail', 'callbackNumber',
+                         'preferredTime', 'shareFindings', 'findings',
+                         'shareLocation', 'timezone', 'area', 'note',
+                         'status', 'source', 'createdAt',
+                       ])
+                    && request.resource.data.callbackNumber is string
+                    && request.resource.data.callbackNumber.size() >= 6
+                    && request.resource.data.callbackNumber.size() <= 40
+                    && request.resource.data.note is string
+                    && request.resource.data.note.size() <= 2000
+                    && request.resource.data.status == 'new';
+      allow read, update, delete: if false;
+    }
+
     // Everything else is denied for all clients. Trusted backend via the Admin
     // SDK bypasses rules entirely and is governed by its own threat model.
     match /{document=**} {

@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "184561867400",
+    "project_id": "ieye-in",
+    "storage_bucket": "ieye-in.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:184561867400:android:501ca189e597d834ec5d3d",
+        "android_client_info": {
+          "package_name": "in.ieye.ieye"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "184561867400-a6qrr70cc9gved3orhb7euife9luoe64.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJH5w5rshZyHLRguuQX_e2fc-AmfbPilA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "184561867400-a6qrr70cc9gved3orhb7euife9luoe64.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "184561867400-2o9f4pouck0t7op8ljj1hhb6qn4disb3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "in.ieye.ieye"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
