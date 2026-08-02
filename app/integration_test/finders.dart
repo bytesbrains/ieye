@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ieye/app.dart';
 import 'package:ieye/core/checker.dart';
+import 'package:ieye/core/homescan/scanner.dart';
 import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
 import 'package:ieye/features/checker/checker_invite_screen.dart';
@@ -22,9 +23,10 @@ class ReachSink implements TriggerSink {
   Future<void> fire(WelfareSignal signal) async {}
 }
 
-/// Boot the real app and let it settle.
-Future<void> pumpApp(WidgetTester tester) async {
-  await tester.pumpWidget(const IEyeApp());
+/// Boot the real app and let it settle. [scanner] injects a deterministic scan
+/// engine (a StubScanner) for the security-scan E2E; production uses the real one.
+Future<void> pumpApp(WidgetTester tester, {NetworkScanner? scanner}) async {
+  await tester.pumpWidget(IEyeApp(scanner: scanner));
   await tester.pumpAndSettle();
 }
 
@@ -67,6 +69,30 @@ Future<void> goToHomeAsMyself(WidgetTester tester) async {
   await tester.tap(forMyself);
   await tester.pumpAndSettle();
   await passComprehensionGate(tester);
+}
+
+// ---- security scan (the front foot) ----
+final consentAffirm = find.textContaining('my own home network');
+final scanReportHeadline = find.textContaining('reachable from the internet');
+final talkToSpecialist = find.text('Talk to a specialist');
+// Over-trust guardrail: the scan report must never claim you're "protected".
+final fakeSafeShield = find.textContaining('protected');
+
+/// From onboarding, run the front-foot scan to the honest report. The onboarding
+/// route goes offstage after navigation, so `scanMyHome` then resolves to the scan
+/// screen's own button (offstage widgets are skipped by default).
+Future<void> goToScanReport(WidgetTester tester) async {
+  await tester.ensureVisible(scanMyHome);
+  await tester.pumpAndSettle();
+  await tester.tap(scanMyHome);
+  await tester.pumpAndSettle();
+  // On the Home Security Scan screen — affirm ownership, then scan.
+  await tester.tap(consentAffirm);
+  await tester.pump();
+  await tester.ensureVisible(scanMyHome);
+  await tester.pumpAndSettle();
+  await tester.tap(scanMyHome);
+  await tester.pumpAndSettle();
 }
 
 /// Acknowledge the "found, not rescued" micro-check and arm. The gate scrolls, so

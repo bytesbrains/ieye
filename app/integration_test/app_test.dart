@@ -9,6 +9,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:ieye/core/homescan/scanner.dart';
 
 import 'finders.dart';
 
@@ -99,6 +100,30 @@ void main() {
 
       // Lands on the honest home (degraded — no off-device reach yet, #27).
       expect(degradedHeadline, findsWidgets);
+    });
+  });
+
+  group('security scan (the front foot)', () {
+    testWidgets('onboarding → consent → scan → honest report, never a shield', (
+      tester,
+    ) async {
+      // Inject a deterministic scan (real LanScanner would hit the live network).
+      await pumpApp(
+        tester,
+        scanner: const StubScanner(settleDelay: Duration.zero),
+      );
+
+      // iEye Secure leads on the first screen.
+      expect(scanMyHome, findsOneWidget);
+
+      await goToScanReport(tester);
+
+      // The honest report: the CRITICAL exposure surfaces, a specialist is
+      // offered, and it NEVER claims "protected" (over-trust guardrail, PRD §7).
+      expect(scanReportHeadline, findsWidgets);
+      expect(find.text('CRITICAL'), findsWidgets);
+      expect(talkToSpecialist, findsWidgets);
+      expect(fakeSafeShield, findsNothing);
     });
   });
 }
