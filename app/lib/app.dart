@@ -5,6 +5,7 @@ import 'core/circle.dart';
 import 'core/delivery_mode.dart';
 import 'core/detection_brain.dart';
 import 'core/homescan/lan_scanner.dart';
+import 'features/homescan/platform_wifi_source.dart';
 import 'core/rhythm.dart';
 import 'core/trigger_sink.dart';
 import 'features/arming/comprehension_gate_screen.dart';
@@ -75,7 +76,9 @@ class _IEyeAppState extends State<IEyeApp> {
         // Home Security Scan — day-one value (finds exposed cameras/IoT on the
         // user's own network). Uses the real dart:io LAN scanner; the screen's
         // own default is the StubScanner (demo data) for previews/tests.
-        '/security-scan': (_) => SecurityScanScreen(scanner: LanScanner()),
+        '/security-scan': (_) => SecurityScanScreen(
+              scanner: LanScanner(wifi: const PlatformWifiSource()),
+            ),
         // Checkers arrive here from an invite link (#17). Demo invite until real
         // invites are wired; the handshake itself is fully functional.
         '/checker-invite':
