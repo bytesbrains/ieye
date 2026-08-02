@@ -68,8 +68,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk "ieye-${TAG}-android.apk"
-          gh release upload "$TAG" "ieye-${TAG}-android.apk" --clobber
+          # Version-LESS asset name so the landing can link a stable URL:
+          # <repo>/releases/latest/download/ieye-android.apk. The tag/release
+          # already carries the version.
+          cp build/app/outputs/flutter-apk/app-release.apk "ieye-android.apk"
+          gh release upload "$TAG" "ieye-android.apk" --clobber
 
   linux:
     name: Linux bundle
@@ -95,8 +98,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          tar -czf "ieye-${TAG}-linux-x64.tar.gz" -C build/linux/x64/release/bundle .
-          gh release upload "$TAG" "ieye-${TAG}-linux-x64.tar.gz" --clobber
+          # Version-less name for a stable "latest" download URL (see Android note).
+          tar -czf "ieye-linux-x64.tar.gz" -C build/linux/x64/release/bundle .
+          gh release upload "$TAG" "ieye-linux-x64.tar.gz" --clobber
 
   windows:
     name: Windows build
@@ -121,8 +125,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "ieye-$env:TAG-windows-x64.zip"
-          gh release upload "$env:TAG" "ieye-$env:TAG-windows-x64.zip" --clobber
+          # Version-less name for a stable "latest" download URL (see Android note).
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "ieye-windows-x64.zip"
+          gh release upload "$env:TAG" "ieye-windows-x64.zip" --clobber
+
+  # Publish the draft once the freely-distributable binaries are attached, and
+  # mark it `latest` so the landing's stable download URLs
+  # (…/releases/latest/download/ieye-android.apk) resolve. Apple assets, when
+  # enabled, arrive on the same release shortly after — not a blocker here.
+  # NOTE: must NOT be a prerelease — GitHub's `latest` only points at a normal,
+  # published, non-prerelease release.
+  publish:
+    name: Publish release
+    needs: [android, linux, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Un-draft and mark latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "$TAG" --draft=false --latest --repo "$GITHUB_REPOSITORY"
 
   # ---- Apple, gated ---------------------------------------------------------
   # Enable by setting repo variable APPLE_SIGNING_ENABLED = "true" and adding the
