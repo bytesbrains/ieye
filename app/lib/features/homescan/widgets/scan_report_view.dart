@@ -53,6 +53,11 @@ class _ExposureOverview extends StatelessWidget {
     final text = Theme.of(context).textTheme;
     final worst = report.worst;
 
+    // The critical headline counts DEVICES, not findings — one camera can emit
+    // several critical findings and "5 devices" when 3 are affected overstates.
+    // A worst of INFO reads as the calm state: info notes identify devices, they
+    // don't call for action (alarm-fatigue guardrail).
+    final criticalDevices = report.criticalDeviceCount;
     final (icon, accent, headline) = switch (worst) {
       null => (
         Icons.wb_incandescent_outlined,
@@ -62,8 +67,15 @@ class _ExposureOverview extends StatelessWidget {
       Severity.critical => (
         Icons.visibility_off_outlined,
         IEyeColors.amberDeep,
-        '${report.criticalCount} device${report.criticalCount == 1 ? '' : 's'} '
+        '$criticalDevices device${criticalDevices == 1 ? '' : 's'} '
             'may be reachable from the internet',
+      ),
+      Severity.info => (
+        Icons.wb_incandescent_outlined,
+        IEyeColors.tealDeep,
+        'Nothing needing action — '
+            '${report.findingCount} note${report.findingCount == 1 ? '' : 's'} '
+            'below',
       ),
       _ => (
         Icons.warning_amber_rounded,
@@ -73,7 +85,7 @@ class _ExposureOverview extends StatelessWidget {
       ),
     };
 
-    final flagged = report.flagged.length;
+    final needsLook = report.attentionCount;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -87,7 +99,7 @@ class _ExposureOverview extends StatelessWidget {
           // A gently pulsing alert when something may be reachable from outside
           // the home right now — the one place the report earns urgency.
           if (worst == Severity.critical) ...[
-            _CriticalAlertChip(report.criticalCount),
+            _CriticalAlertChip(criticalDevices),
             const SizedBox(height: 16),
           ],
           Semantics(
@@ -110,7 +122,9 @@ class _ExposureOverview extends StatelessWidget {
           if (report.findingCount > 0) ...[
             const SizedBox(height: 20),
             Text(
-              'EXPOSURE BY SEVERITY',
+              // "Findings", not "exposure" — INFO rows identify devices without
+              // asserting exposure, and the label must not oversell them.
+              'FINDINGS BY SEVERITY',
               style: text.bodyMedium?.copyWith(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -121,7 +135,11 @@ class _ExposureOverview extends StatelessWidget {
             const SizedBox(height: 12),
             _SeverityBars(report.severityCounts),
           ],
-          if (report.findingCount == 0) ...[
+          // "Nothing found ≠ safe" whenever nothing rose above INFO — info notes
+          // are identification, so this honest caveat still applies with them on
+          // screen (previously gated on zero findings, which presence notes made
+          // unreachable on any normal smart home).
+          if (report.nothingAboveInfo) ...[
             const SizedBox(height: 14),
             const _NoFindingsCaveat(),
           ],
@@ -135,8 +153,8 @@ class _ExposureOverview extends StatelessWidget {
               const _StatDivider(),
               _Stat(
                 label: 'Need a look',
-                value: '$flagged',
-                accent: flagged > 0
+                value: '$needsLook',
+                accent: needsLook > 0
                     ? IEyeColors.amberDeep
                     : IEyeColors.tealDeep,
               ),
@@ -151,14 +169,17 @@ class _ExposureOverview extends StatelessWidget {
 }
 
 /// A gently pulsing CRITICAL chip — draws the eye to an exposure that may be
-/// reachable from outside the home right now.
+/// reachable from outside the home right now. [count] is the number of affected
+/// DEVICES (matching the headline), not findings.
 ///
 /// Deliberately NOT a strobe: it breathes at ~0.8 Hz (a slow beacon pulse), well
 /// under the WCAG 2.3.1 flashing threshold — a hard blink is a seizure risk and
 /// off-brand (a lighthouse sweeps, it doesn't flash an alarm). Warm beacon-amber,
 /// never alarm-red. The motion is only an ENHANCEMENT on top of icon + WORD +
 /// count, and it honours reduced-motion (renders static then), so nothing depends
-/// on the animation to be understood.
+/// on the animation to be understood. It breathes a handful of times and then
+/// rests — the eye has been drawn by then, and a finite animation lets the frame
+/// pipeline (and pumpAndSettle in tests) go quiet.
 class _CriticalAlertChip extends StatefulWidget {
   const _CriticalAlertChip(this.count);
   final int count;
@@ -169,10 +190,40 @@ class _CriticalAlertChip extends StatefulWidget {
 
 class _CriticalAlertChipState extends State<_CriticalAlertChip>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1300),
-  )..repeat(reverse: true);
+  /// Full breaths (dim-and-back) before the chip comes to rest, bright.
+  static const _breaths = 4;
+
+  late final AnimationController _c;
+  int _breathsDone = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Created here, not in the field initializer — the ticker provider is only
+    // guaranteed ready once initState runs (review #81 / wrokin).
+    // A manual ping-pong rather than repeat(reverse:) — repeat() never emits a
+    // terminal status, so it could not be counted or brought to rest.
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    );
+    _c.addStatusListener((status) {
+      // Bottom of a breath: come back up.
+      if (status == AnimationStatus.dismissed) {
+        _c.forward();
+        return;
+      }
+      // Top of a breath (the controller is at its bright end, which is also
+      // where it starts) — count it, then either breathe again or rest here.
+      // Resting is only ever decided at the top, so the chip can never be left
+      // stuck mid-dim, whatever the status parity.
+      if (status != AnimationStatus.completed) return;
+      _breathsDone += 1;
+      if (_breathsDone > _breaths) return;
+      _c.reverse();
+    });
+    _c.reverse(from: 1.0); // start bright, dim first
+  }
 
   @override
   void dispose() {
@@ -214,8 +265,11 @@ class _CriticalAlertChipState extends State<_CriticalAlertChip>
     );
 
     return Semantics(
-      liveRegion: true,
+      // No liveRegion here — the headline just below is already one, and two
+      // stacked live regions announce over each other. excludeSemantics stops
+      // the chip's own text being read out a second time after the label.
       label: 'Critical exposure: ${widget.count}',
+      excludeSemantics: true,
       child: reduceMotion
           ? chip
           : FadeTransition(
@@ -330,6 +384,9 @@ class _SeverityBar extends StatelessWidget {
     final (label, color, icon) = _severityStyle(severity);
     return Semantics(
       label: '$label: $count',
+      // The label already says it all — don't let the row's own text nodes be
+      // read out again after it.
+      excludeSemantics: true,
       child: Row(
         children: [
           SizedBox(
@@ -830,16 +887,34 @@ class _FixOwnerChip extends StatelessWidget {
 class _SpecialistButton extends StatelessWidget {
   const _SpecialistButton();
 
+  /// How long to wait on the platform's clipboard before giving up on the
+  /// claim. Real writes answer in milliseconds; the bound exists so a platform
+  /// that never replies can't swallow the message the user is waiting for.
+  static const _copyTimeout = Duration(seconds: 2);
+
   // In-app booking (findings + your details, one tap) lands next PR. Until then,
   // point people to the BytesBrains inbox and copy the address so it's one tap.
-  // Copy is fire-and-forget so the message shows even if the clipboard is denied.
-  void _contact(BuildContext context) {
-    Clipboard.setData(const ClipboardData(text: kBytesBrainsContactEmail));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+  // The write is awaited so "we've copied it" is only claimed once it's true
+  // (review #81 / wrokin); if the clipboard is denied or silent, the message
+  // still carries the address — it just drops the claim.
+  Future<void> _contact(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    var copied = true;
+    try {
+      await Clipboard.setData(
+        const ClipboardData(text: kBytesBrainsContactEmail),
+      ).timeout(_copyTimeout);
+    } catch (_) {
+      copied = false;
+    }
+    messenger.showSnackBar(
+      SnackBar(
         content: Text(
-          'Email $kBytesBrainsContactEmail — we’ve copied it for you. '
-          'A BytesBrains specialist can close this safely.',
+          copied
+              ? 'Email $kBytesBrainsContactEmail — we’ve copied it for you. '
+                    'A BytesBrains specialist can close this safely.'
+              : 'Email $kBytesBrainsContactEmail. '
+                    'A BytesBrains specialist can close this safely.',
         ),
       ),
     );

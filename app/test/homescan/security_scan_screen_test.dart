@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ieye/core/homescan/scanner.dart';
 import 'package:ieye/features/homescan/security_scan_screen.dart';
@@ -40,8 +41,8 @@ void main() {
     await tester.tap(find.textContaining("my own home network"));
     await tester.pump();
     await tester.tap(find.text('Scan my home'));
-    // The report's CRITICAL chip pulses forever, so pumpAndSettle would time out;
-    // pump the report into place (settleDelay is zero) and assert on it.
+    // The report's CRITICAL chip breathes for a few seconds; pump the report
+    // into place (settleDelay is zero) rather than waiting it out.
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 50));
 
@@ -81,6 +82,30 @@ void main() {
     expect(find.text('WPA/TKIP · old'), findsOneWidget);
   });
 
+  testWidgets('the CRITICAL chip breathes, then comes to rest at full opacity',
+      (tester) async {
+    // A finite pulse: it draws the eye and stops. An endless one would repaint
+    // the report forever and leave pumpAndSettle unusable for every later test.
+    await tester.pumpWidget(harness());
+    await tester.tap(find.textContaining('my own home network'));
+    await tester.pump();
+    await tester.tap(find.text('Scan my home'));
+    await tester.pump();
+
+    // pumpAndSettle returning at all proves the animation terminates.
+    await tester.pumpAndSettle();
+    expect(find.textContaining('CRITICAL EXPOSURE'), findsOneWidget);
+
+    final fade = tester.widget<FadeTransition>(
+      find.ancestor(
+        of: find.textContaining('CRITICAL EXPOSURE'),
+        matching: find.byType(FadeTransition),
+      ).first,
+    );
+    // At rest it must be fully legible, never stuck mid-dim.
+    expect(fade.opacity.value, 1.0);
+  });
+
   testWidgets('a clean scan is honest — "not a clean bill of health", never safe',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
@@ -102,8 +127,22 @@ void main() {
     expect(find.textContaining('protected'), findsNothing);
   });
 
-  testWidgets('the specialist CTA points to the BytesBrains contact email',
-      (tester) async {
+  /// Drive the clean-scan report to the specialist CTA and tap it, with the
+  /// clipboard channel behaving as [onCopy] dictates.
+  Future<void> tapSpecialist(
+    WidgetTester tester, {
+    required Future<Object?> Function() onCopy,
+  }) async {
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async =>
+          call.method == 'Clipboard.setData' ? await onCopy() : null,
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null),
+    );
+
     await tester.pumpWidget(MaterialApp(
       theme: buildIEyeTheme(),
       home: const SecurityScanScreen(scanner: _CleanScanner()),
@@ -114,12 +153,31 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Talk to a specialist').first);
-    await tester.pump(); // run the handler up to the async clipboard write
-    await tester.pump(); // future resolves → showSnackBar is called
+    await tester.pump(); // run the handler up to the awaited clipboard write
+    await tester.pump(); // write settles → showSnackBar is called
     await tester.pump(const Duration(milliseconds: 400)); // SnackBar animates in
     // (don't pumpAndSettle — it would fast-forward past the 4s auto-dismiss.)
+  }
+
+  testWidgets('the specialist CTA points to the BytesBrains contact email',
+      (tester) async {
+    await tapSpecialist(tester, onCopy: () async => null);
 
     expect(find.textContaining('contact@bytesbrains.com'), findsOneWidget);
+    expect(find.textContaining('we’ve copied it for you'), findsOneWidget);
+  });
+
+  testWidgets('a denied clipboard still gives the address, minus the claim',
+      (tester) async {
+    // The write is awaited so the message can't claim something that didn't
+    // happen — if the platform refuses, say the address, don't say "copied".
+    await tapSpecialist(
+      tester,
+      onCopy: () async => throw PlatformException(code: 'denied'),
+    );
+
+    expect(find.textContaining('contact@bytesbrains.com'), findsOneWidget);
+    expect(find.textContaining('copied'), findsNothing);
   });
 
   testWidgets(

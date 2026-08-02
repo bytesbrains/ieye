@@ -41,15 +41,27 @@ class LanScanner implements NetworkScanner {
   final MdnsSource _mdns;
   final FingerprintEngine engine;
 
-  /// The small set of ports whose presence tells us a host is worth a closer look
-  /// — camera/DVR ports first (the XM Sofia pair, RTSP, web), then a few common
-  /// admin ports. Kept short so a full /24 sweep stays quick.
+  /// The ports whose presence tells us a host is worth a closer look. This list
+  /// must cover every port the [FingerprintEngine]'s rules key off — a rule whose
+  /// port is never swept can never fire (review #81 §1). Cost: [SocketHostProbe]
+  /// probes one host's ports concurrently under a ~400ms connect timeout, so a
+  /// longer list widens each host's probe fan-out, not the sweep's wall-clock
+  /// (still ≈ 254 hosts / [maxConcurrent] × timeout).
   final List<int> discoveryPorts;
   final int maxConcurrent;
   final DateTime Function() _now;
 
   static const List<int> defaultDiscoveryPorts = [
-    80, 443, 554, 8000, 8080, 8899, 34567, 37777, 23, 22,
+    // Camera/recorder tells — the flagship findings (XM Sofia pair, RTSP,
+    // web UIs, Dahua DVRIP).
+    80, 443, 554, 8000, 8080, 8899, 34567, 37777,
+    // Cross-cutting killers: remote login + the open Android debug bridge.
+    22, 23, 5555,
+    // NAS (SMB + Synology DSM), printer (IPP, JetDirect), TV/streaming
+    // (Chromecast, Roku), smart-home hub (Home Assistant).
+    445, 5000, 5001, 631, 9100, 8008, 8009, 8060, 8123,
+    // Databases that should never face the LAN unauthenticated.
+    6379, 27017, 3306, 5432, 9200,
   ];
 
   @override

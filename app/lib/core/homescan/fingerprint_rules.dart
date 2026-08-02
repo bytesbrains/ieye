@@ -66,15 +66,33 @@ class FingerprintEngine {
     final banner = (obs.httpServerBanner ?? '').toLowerCase();
     final magic = (obs.rtspMediaMagic ?? '').toLowerCase();
 
-    // mDNS service types are the strongest, most honest identity signal — the
-    // device announces what it is — so consult them before port/banner heuristics.
-    // Camera services return null here and fall through to the XM/RTSP tells
-    // below, which carry the specific vulnerable-family findings a name can't.
-    final byMdns = _classifyByService(obs);
-    if (byMdns != null) return (byMdns, null, null);
-
     final isXmFamily =
         _xmSofiaPorts.every(obs.hasPort) || magic.startsWith(_imkhMagicHex);
+
+    // The camera/recorder tells carry the flagship CRITICAL findings, so they
+    // ALWAYS win over an mDNS identity: a HomeKit or Cast-enabled camera
+    // advertises `_hap`/`_googlecast` too, and letting the announced name
+    // classify it would silently drop exposedCameraCloudP2P (review #81 §2).
+    final hasCameraTell = isXmFamily ||
+        obs.hasPort(554) ||
+        obs.hasPort(37777) ||
+        banner.contains('dvr') ||
+        banner.contains('nvr');
+
+    // mDNS service types are the strongest, most honest identity signal — the
+    // device announces what it is — but only where no camera/recorder tell is
+    // present (above). The banner still contributes vendor/model: a device's
+    // name says WHAT it is, its banner says WHOSE it is (review #81 §3).
+    if (!hasCameraTell) {
+      final byMdns = _classifyByService(obs, banner);
+      if (byMdns != null) {
+        final vendor = switch (byMdns) {
+          DeviceClass.nas => _nasVendor(banner),
+          _ => null,
+        };
+        return (byMdns, vendor, _grepModel(obs.httpServerBanner));
+      }
+    }
 
     if (isXmFamily) {
       // XiongMai / Sofia / Hisilicon line — the Mirai-era camera family.
@@ -147,12 +165,12 @@ class FingerprintEngine {
     return (DeviceClass.unknown, obs.macVendor, null);
   }
 
-  /// Classify a device purely from the mDNS service types it advertises — the
-  /// device's own declaration of what it is. Returns null when no service type is
-  /// a confident tell (the caller then falls back to port/banner heuristics).
-  /// Camera services are intentionally left to the XM/RTSP path, which carries the
-  /// vulnerable-family findings.
-  DeviceClass? _classifyByService(DeviceObservation obs) {
+  /// Classify a device from the mDNS service types it advertises — the device's
+  /// own declaration of what it is. Returns null when no service type is a
+  /// confident tell (the caller then falls back to port/banner heuristics).
+  /// Only consulted when no camera/recorder tell is present — the caller guards
+  /// that, so a HomeKit/Cast camera keeps its vulnerable-family findings.
+  DeviceClass? _classifyByService(DeviceObservation obs, String banner) {
     if (obs.hasService('_googlecast') ||
         obs.hasService('_airplay') ||
         obs.hasService('_raop') ||
@@ -172,7 +190,16 @@ class FingerprintEngine {
         obs.hasService('_afpovertcp') ||
         obs.hasService('_nfs') ||
         obs.hasService('_adisk')) {
-      return DeviceClass.nas;
+      // File-sharing services alone don't make a NAS — a Mac with File Sharing
+      // on advertises the exact same set (review #81 §5). Call it a NAS only
+      // with corroboration (a DSM/QNAP admin port or a vendor banner);
+      // otherwise it's a computer sharing files, which is not a finding.
+      final nasCorroborated = obs.hasPort(5000) ||
+          obs.hasPort(5001) ||
+          banner.contains('synology') ||
+          banner.contains('qnap') ||
+          banner.contains('diskstation');
+      return nasCorroborated ? DeviceClass.nas : DeviceClass.computer;
     }
     if (obs.hasService('_hue') ||
         obs.hasService('_home-assistant') ||
@@ -192,7 +219,7 @@ class FingerprintEngine {
     // The live stream itself, served on the LAN (RTSP/554). Distinct from the
     // cloud/P2P path: this is the raw feed offered to anyone who reaches the
     // network. We see the door is open; we never walk through it.
-    if (obs.hasPort(554)) out.add(_streamExposure(obs.ip));
+    if (obs.hasPort(554)) out.add(_streamExposure(obs.ip, 'camera'));
 
     if (isXm) {
       // §5.2 — cloud/P2P by default → reachable from the internet by serial. NAT
@@ -275,22 +302,26 @@ class FingerprintEngine {
   }
 
   /// The live-stream-reachable finding, shared by cameras and recorders (both
-  /// serve RTSP). It flags that the video is *offered* on the network — detected
-  /// from the open stream port, never by opening the stream (guardian eye, never a
-  /// lens; the exposure, never the content).
-  Finding _streamExposure(String ip) => Finding(
+  /// serve RTSP) — [what] names the device so the copy reads right on either.
+  /// It flags that the video is *offered* on the network — detected from the
+  /// open stream port, never by opening the stream (guardian eye, never a lens;
+  /// the exposure, never the content). MEDIUM, not high: a LAN-served stream is
+  /// the normal state of nearly every IP camera — it only bites with another
+  /// factor (weak password, a forwarded port), and crying HIGH on every camera
+  /// is the alarm-fatigue failure mode (review #81 §4).
+  Finding _streamExposure(String ip, String what) => Finding(
     kind: FindingKind.exposedCameraStream,
-    severity: Severity.high,
+    severity: Severity.medium,
     deviceIp: ip,
     title: 'Its live video is being served on your network',
     whatItMeans:
-        'The camera offers its video over a standard streaming port (RTSP). Any '
+        'The $what offers its video over a standard streaming port (RTSP). Any '
         'device on your Wi-Fi can try to watch it, and if your router forwards '
         'that port, so could someone on the internet. iEye can see the stream is '
         'offered here — it never opens it.',
-    remediation: const [
-      'Set a strong password on the camera so the stream isn’t open to anyone.',
-      'Make sure your router isn’t forwarding the camera’s ports to the internet.',
+    remediation: [
+      'Set a strong password on the $what so the stream isn’t open to anyone.',
+      'Make sure your router isn’t forwarding the $what’s ports to the internet.',
       'Best: put cameras on their own network so only you can reach the stream '
           '(a specialist can set this up).',
     ],
@@ -323,7 +354,7 @@ class FingerprintEngine {
       ),
     ];
     // A recorder usually restreams its cameras' live video too (RTSP).
-    if (obs.hasPort(554)) out.add(_streamExposure(obs.ip));
+    if (obs.hasPort(554)) out.add(_streamExposure(obs.ip, 'recorder'));
     return out;
   }
 
@@ -337,11 +368,12 @@ class FingerprintEngine {
 
   /// NAS / storage — it holds the household's files and is a top ransomware
   /// target. Detected here; whether it's already locked down we can't see, so this
-  /// is honest hardening guidance, not an assertion of exposure.
+  /// is honest hardening guidance, not an assertion of exposure — INFO, because
+  /// presence is not exposure and inflating it is the alarm-fatigue failure mode.
   List<Finding> _nasFindings(DeviceObservation obs) => [
     Finding(
       kind: FindingKind.storageDeviceFound,
-      severity: Severity.medium,
+      severity: Severity.info,
       deviceIp: obs.ip,
       title: 'A storage box holding your files is on the network',
       whatItMeans:
@@ -360,11 +392,12 @@ class FingerprintEngine {
   ];
 
   /// Printer / MFP — commonly an open web page with no password, and it keeps
-  /// copies of what it scans. Not an emergency on its own; worth closing.
+  /// copies of what it scans. Not an emergency on its own; worth closing. INFO —
+  /// presence, not exposure.
   List<Finding> _printerFindings(DeviceObservation obs) => [
     Finding(
       kind: FindingKind.printerFound,
-      severity: Severity.medium,
+      severity: Severity.info,
       deviceIp: obs.ip,
       title: 'A printer is open on the network',
       whatItMeans:
@@ -385,7 +418,7 @@ class FingerprintEngine {
   List<Finding> _mediaFindings(DeviceObservation obs) => [
     Finding(
       kind: FindingKind.mediaDeviceFound,
-      severity: Severity.low,
+      severity: Severity.info,
       deviceIp: obs.ip,
       title: 'A TV or streaming device is on the network',
       whatItMeans:
@@ -400,10 +433,11 @@ class FingerprintEngine {
 
   /// Smart-home hub — it controls other devices (possibly lights, locks, cameras).
   /// Being on your own network is normal; being weakly protected is the risk.
+  /// INFO — presence, not exposure.
   List<Finding> _hubFindings(DeviceObservation obs) => [
     Finding(
       kind: FindingKind.smartHubFound,
-      severity: Severity.medium,
+      severity: Severity.info,
       deviceIp: obs.ip,
       title: 'A smart-home hub is on the network',
       whatItMeans:
@@ -490,7 +524,7 @@ class FingerprintEngine {
           ],
           fixOwner: FixOwner.specialist,
         ));
-        break; // one is enough to make the point
+        // No break — a host running two exposed databases has two problems.
       }
     }
 

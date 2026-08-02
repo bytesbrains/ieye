@@ -49,9 +49,13 @@ void main() {
           .assess(obs)
           .findings
           .firstWhere((f) => f.kind == FindingKind.exposedCameraStream);
-      expect(stream.severity, Severity.high);
+      // MEDIUM, not high: a LAN-served stream is the normal state of nearly
+      // every IP camera, so crying HIGH on all of them is alarm fatigue. The
+      // CRITICAL cloud/P2P finding is what carries the urgency here.
+      expect(stream.severity, Severity.medium);
       // Detect-not-view: we report the stream is offered, never that we opened it.
       expect(stream.whatItMeans, contains('never opens it'));
+      expect(stream.whatItMeans, contains('camera offers its video'));
       expect(stream.verified, isFalse);
     });
   });
@@ -74,11 +78,11 @@ void main() {
           .firstWhere((f) => f.kind == FindingKind.exposedRecorder);
       expect(rec.severity, Severity.high);
       expect(rec.whatItMeans, contains('saved recordings'));
-      // A recorder restreams too, so the open-stream finding rides along.
-      expect(
-        r.findings.map((f) => f.kind),
-        contains(FindingKind.exposedCameraStream),
-      );
+      // A recorder restreams too, so the open-stream finding rides along —
+      // worded for a recorder, not a camera, since the copy is shared.
+      final stream = r.findings
+          .firstWhere((f) => f.kind == FindingKind.exposedCameraStream);
+      expect(stream.whatItMeans, contains('recorder offers its video'));
       // Passive tier: inferred from the open port, never signed into.
       expect(r.findings.every((f) => f.verified == false), isTrue);
     });
@@ -160,6 +164,33 @@ void main() {
           contains(FindingKind.storageDeviceFound));
     });
 
+    test('merely finding a device is INFO — presence is not exposure', () {
+      // Identifying a NAS/printer/TV/hub is context, not a call to action. If
+      // these counted as MEDIUM the "need a look" number would put every normal
+      // smart home on alert, and the honest "nothing found" state — the one
+      // that says a passive scan proves nothing — could never be reached.
+      Severity worstOf(DeviceObservation o) => engine.assess(o).worst!;
+      expect(
+        worstOf(const DeviceObservation(
+          ip: '192.168.0.20',
+          openPorts: {445, 5000},
+        )),
+        Severity.info,
+      );
+      expect(
+        worstOf(const DeviceObservation(ip: '192.168.0.30', openPorts: {9100})),
+        Severity.info,
+      );
+      expect(
+        worstOf(const DeviceObservation(ip: '192.168.0.41', openPorts: {8009})),
+        Severity.info,
+      );
+      expect(
+        worstOf(const DeviceObservation(ip: '192.168.0.50', openPorts: {8123})),
+        Severity.info,
+      );
+    });
+
     test('a JetDirect printer is classed as a printer', () {
       final r = assessOne(const DeviceObservation(
         ip: '192.168.0.30',
@@ -202,13 +233,47 @@ void main() {
       expect(r.observation.mdnsName, 'Kitchen Speaker');
     });
 
-    test('_ipp → printer, _smb → NAS, _home-assistant → hub', () {
+    test('_ipp → printer, _home-assistant → hub', () {
       DeviceClass cls(String svc) => engine
           .assess(DeviceObservation(ip: '192.168.0.9', mdnsServices: {svc}))
           .deviceClass;
       expect(cls('_ipp._tcp'), DeviceClass.printer);
-      expect(cls('_smb._tcp'), DeviceClass.nas);
       expect(cls('_home-assistant._tcp'), DeviceClass.smartHub);
+    });
+
+    test('file sharing alone is a computer, not a NAS (no ransomware scare)', () {
+      // A Mac with File Sharing / Time Machine on advertises exactly these. It
+      // must not be called a NAS and handed storage-hardening advice.
+      final mac = engine.assess(const DeviceObservation(
+        ip: '192.168.0.11',
+        openPorts: {445},
+        mdnsName: 'Sandeep’s MacBook',
+        mdnsServices: {'_smb._tcp', '_afpovertcp._tcp', '_adisk._tcp'},
+      ));
+      expect(mac.deviceClass, DeviceClass.computer);
+      expect(mac.findings, isEmpty);
+
+      // With corroboration (a DSM admin port), it IS a NAS.
+      final nas = engine.assess(const DeviceObservation(
+        ip: '192.168.0.20',
+        openPorts: {445, 5000},
+        mdnsServices: {'_smb._tcp'},
+      ));
+      expect(nas.deviceClass, DeviceClass.nas);
+    });
+
+    test('mDNS keeps the banner vendor and model', () {
+      // The device's name says WHAT it is; its banner says WHOSE it is. A NAS
+      // identified over mDNS must not lose "Synology" from the report subtitle.
+      final r = engine.assess(const DeviceObservation(
+        ip: '192.168.0.20',
+        openPorts: {80, 443, 445, 5000, 5001},
+        httpServerBanner: 'Synology DiskStation',
+        mdnsName: 'DiskStation',
+        mdnsServices: {'_smb._tcp', '_afpovertcp._tcp'},
+      ));
+      expect(r.deviceClass, DeviceClass.nas);
+      expect(r.vendorFamily, 'Synology');
     });
 
     test('mDNS never masks the vulnerable XM camera family', () {
@@ -224,6 +289,42 @@ void main() {
       expect(r.deviceClass, DeviceClass.ipCamera);
       expect(r.worst, Severity.critical);
       expect(r.observation.mdnsName, 'Front Door Cam'); // name still available
+    });
+
+    test('a HomeKit/Cast camera keeps its CRITICAL findings', () {
+      // THE regression: HomeKit cameras advertise _hap and Google cameras
+      // _googlecast. If the announced identity won, assess() would dispatch to
+      // the hub/media rules and silently drop exposedCameraCloudP2P.
+      for (final svc in ['_hap._tcp', '_googlecast._tcp']) {
+        final r = engine.assess(DeviceObservation(
+          ip: '192.168.0.149',
+          openPorts: const {80, 554, 8899, 34567},
+          httpServerBanner: 'IPC_GK7205V200_G4F_S38',
+          mdnsName: 'Nursery Cam',
+          mdnsServices: {svc},
+        ));
+        expect(r.deviceClass, DeviceClass.ipCamera, reason: svc);
+        expect(
+          r.findings.map((f) => f.kind),
+          contains(FindingKind.exposedCameraCloudP2P),
+          reason: svc,
+        );
+      }
+    });
+
+    test('a recorder announcing itself over mDNS is still a recorder', () {
+      final r = engine.assess(const DeviceObservation(
+        ip: '192.168.0.201',
+        openPorts: {80, 37777},
+        httpServerBanner: 'DVR-Webs',
+        mdnsName: 'Hallway NVR',
+        mdnsServices: {'_googlecast._tcp'},
+      ));
+      expect(r.deviceClass, DeviceClass.nvr);
+      expect(
+        r.findings.map((f) => f.kind),
+        contains(FindingKind.exposedRecorder),
+      );
     });
   });
 
@@ -258,6 +359,23 @@ void main() {
           r.findings.firstWhere((f) => f.kind == FindingKind.exposedDatabase);
       expect(db.severity, Severity.high);
       expect(db.title, contains('Redis'));
+    });
+
+    test('every reachable database is named — two open means two findings', () {
+      final titles = engine
+          .assess(
+            const DeviceObservation(
+              ip: '192.168.0.72',
+              openPorts: {6379, 5432},
+            ),
+          )
+          .findings
+          .where((f) => f.kind == FindingKind.exposedDatabase)
+          .map((f) => f.title)
+          .toList();
+      expect(titles, hasLength(2));
+      expect(titles.any((t) => t.contains('Redis')), isTrue);
+      expect(titles.any((t) => t.contains('PostgreSQL')), isTrue);
     });
 
     test('a plain host with no risky ports still invents nothing', () {

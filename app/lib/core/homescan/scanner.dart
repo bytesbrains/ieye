@@ -34,6 +34,29 @@ class ScanReport {
   int get criticalCount =>
       _allFindings.where((f) => f.severity == Severity.critical).length;
 
+  /// Devices carrying at least one CRITICAL finding. The headline counts
+  /// DEVICES ("N devices may be reachable…"), and one camera can emit several
+  /// critical findings — so it must not count findings ([criticalCount]).
+  int get criticalDeviceCount => devices
+      .where((d) => d.findings.any((f) => f.severity == Severity.critical))
+      .length;
+
+  /// Devices with at least one finding above INFO — the "Need a look" number.
+  /// Info findings are identification ("a printer is here"), not a call to
+  /// action; counting them would put every normal smart home on alert
+  /// (alarm-fatigue guardrail).
+  int get attentionCount => devices
+      .where(
+        (d) => d.findings.any((f) => f.severity.index < Severity.info.index),
+      )
+      .length;
+
+  /// True when the scan surfaced no finding above INFO — the "nothing found ≠
+  /// safe" state. Info notes may still be present; they identify devices, they
+  /// don't assert exposure.
+  bool get nothingAboveInfo =>
+      _allFindings.every((f) => f.severity == Severity.info);
+
   bool get anyFindings => findingCount > 0;
 
   /// The single worst severity across the whole scan (null if nothing found).

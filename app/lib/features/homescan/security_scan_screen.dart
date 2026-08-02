@@ -147,17 +147,17 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           child: _scanning
-              ? _Scanning(context: widget.scanContext)
+              ? _Scanning(scanContext: widget.scanContext)
               : _report == null
               ? _Intro(
-                  context: widget.scanContext,
+                  scanContext: widget.scanContext,
                   consented: _consented,
                   onConsentChanged: (v) => setState(() => _consented = v),
                   onScan: _runScan,
                 )
               : _Results(
                   report: _report!,
-                  context: widget.scanContext,
+                  scanContext: widget.scanContext,
                   onRescan: _runScan,
                 ),
         ),
@@ -170,20 +170,20 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
 /// action (enabled only once the user affirms this is their own network).
 class _Intro extends StatelessWidget {
   const _Intro({
-    required this.context,
+    required this.scanContext,
     required this.consented,
     required this.onConsentChanged,
     required this.onScan,
   });
 
-  final ScanContext context;
+  final ScanContext scanContext;
   final bool consented;
   final ValueChanged<bool> onConsentChanged;
   final VoidCallback onScan;
 
   @override
-  Widget build(BuildContext buildContext) {
-    final text = Theme.of(buildContext).textTheme;
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -195,18 +195,18 @@ class _Intro extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(
-          context.introHeadline,
+          scanContext.introHeadline,
           style: text.headlineSmall?.copyWith(fontSize: 26),
         ),
         const SizedBox(height: 14),
-        Text(context.introBody, style: text.bodyLarge),
+        Text(scanContext.introBody, style: text.bodyLarge),
         const SizedBox(height: 20),
         // The honest boundary (car: Wi-Fi, not the car's driving systems). Draws
         // nothing for the home scan, which has no such caveat.
-        _ScopeBanner(context.scopeNote),
+        _ScopeBanner(scanContext.scopeNote),
         // The ownership gate — scanning stays disabled until this is affirmed.
         _ConsentTile(
-          label: context.consent,
+          label: scanContext.consent,
           value: consented,
           onChanged: onConsentChanged,
         ),
@@ -215,7 +215,7 @@ class _Intro extends StatelessWidget {
           // Disabled (null) until consent is given.
           onPressed: consented ? onScan : null,
           icon: const Icon(Icons.radar),
-          label: Text(context.action),
+          label: Text(scanContext.action),
         ),
         const SizedBox(height: 16),
         Row(
@@ -341,12 +341,12 @@ class _ScopeBanner extends StatelessWidget {
 }
 
 class _Scanning extends StatelessWidget {
-  const _Scanning({required this.context});
-  final ScanContext context;
+  const _Scanning({required this.scanContext});
+  final ScanContext scanContext;
 
   @override
-  Widget build(BuildContext buildContext) {
-    final text = Theme.of(buildContext).textTheme;
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.only(top: 64),
       child: Column(
@@ -354,7 +354,7 @@ class _Scanning extends StatelessWidget {
           const _ScanningPulse(),
           const SizedBox(height: 32),
           Text(
-            'Looking over ${context.surface}…',
+            'Looking over ${scanContext.surface}…',
             textAlign: TextAlign.center,
             style: text.titleLarge?.copyWith(fontSize: 19),
           ),
@@ -376,7 +376,10 @@ class _Scanning extends StatelessWidget {
 
 /// A calm radar "ping" — a beacon looking out over the network. Two teal rings
 /// expand and fade around a central beacon icon. On brand (a lighthouse sweeping),
-/// never an anxious spinner; teal (calm), never amber alarm.
+/// never an anxious spinner; teal (calm), never amber alarm. It repeats only for
+/// as long as the scan runs (this widget leaves the tree with the scanning
+/// state), and honours reduced-motion by holding a static frame — like the
+/// CRITICAL chip, the motion is an enhancement, never the information.
 class _ScanningPulse extends StatefulWidget {
   const _ScanningPulse();
   @override
@@ -385,10 +388,18 @@ class _ScanningPulse extends StatefulWidget {
 
 class _ScanningPulseState extends State<_ScanningPulse>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 2200),
-  )..repeat();
+  // Created in initState, not the field initializer — the ticker provider is
+  // only guaranteed ready once initState runs (review #81 / wrokin).
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat();
+  }
 
   @override
   void dispose() {
@@ -411,34 +422,38 @@ class _ScanningPulseState extends State<_ScanningPulse>
     );
   }
 
+  /// The static frame for reduced-motion: two rings held mid-sweep.
+  Widget _frame(double t) => Stack(
+    alignment: Alignment.center,
+    children: [_ring(t), _ring((t + 0.5) % 1.0), _beacon()],
+  );
+
+  Widget _beacon() => Container(
+    width: 56,
+    height: 56,
+    decoration: BoxDecoration(
+      color: IEyeColors.tealDeep.withValues(alpha: 0.12),
+      shape: BoxShape.circle,
+    ),
+    child: const Icon(
+      Icons.wifi_find_outlined,
+      color: IEyeColors.tealDeep,
+      size: 28,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ?? false;
     return SizedBox(
       width: 116,
       height: 116,
-      child: AnimatedBuilder(
-        animation: _c,
-        builder: (context, _) => Stack(
-          alignment: Alignment.center,
-          children: [
-            _ring(_c.value),
-            _ring((_c.value + 0.5) % 1.0),
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: IEyeColors.tealDeep.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.wifi_find_outlined,
-                color: IEyeColors.tealDeep,
-                size: 28,
-              ),
+      child: reduceMotion
+          ? _frame(0.6)
+          : AnimatedBuilder(
+              animation: _c,
+              builder: (context, _) => _frame(_c.value),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -446,21 +461,21 @@ class _ScanningPulseState extends State<_ScanningPulse>
 class _Results extends StatelessWidget {
   const _Results({
     required this.report,
-    required this.context,
+    required this.scanContext,
     required this.onRescan,
   });
   final ScanReport report;
-  final ScanContext context;
+  final ScanContext scanContext;
   final VoidCallback onRescan;
 
   @override
-  Widget build(BuildContext buildContext) {
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Restate the boundary on the report itself (car): a clean Wi-Fi is not a
         // safe car. Draws nothing for the home scan.
-        _ScopeBanner(context.scopeNote),
+        _ScopeBanner(scanContext.scopeNote),
         ScanReportView(report),
         const SizedBox(height: 28),
         OutlinedButton.icon(

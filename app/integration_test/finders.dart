@@ -92,8 +92,8 @@ Future<void> goToScanReport(WidgetTester tester) async {
   await tester.ensureVisible(scanMyHome);
   await tester.pumpAndSettle();
   await tester.tap(scanMyHome);
-  // The report's CRITICAL chip pulses forever, so pumpAndSettle would time out —
-  // pump the report into place instead (the standard idiom for a live animation).
+  // The report's CRITICAL chip breathes for a few seconds before coming to
+  // rest; pump it into place rather than waiting the animation out.
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
 }
@@ -120,7 +120,7 @@ Future<void> goToCarScanReport(WidgetTester tester) async {
   await tester.ensureVisible(scanMyCar);
   await tester.pumpAndSettle();
   await tester.tap(scanMyCar);
-  // As above: the report animates, so pump it into place rather than settle.
+  // As above: the report animates briefly, so pump it into place.
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
 }
