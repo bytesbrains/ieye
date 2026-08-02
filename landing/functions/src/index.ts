@@ -16,3 +16,6 @@ export { grantAdmin, revokeAdmin } from "./adminClaims";
 export { onUserWritten } from "./publicSupporters";
 export { onContributorRequestInvited } from "./invitations";
 export { createContributionCheckout, stripeWebhook } from "./stripe";
+// Outside-in exposure teaser for /app — passive Shodan InternetDB lookup of the
+// caller's own public IP (no key, no active scanning). Served at /api/exposure.
+export { exposureCheck } from "./exposure";
