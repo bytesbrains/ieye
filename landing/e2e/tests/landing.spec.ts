@@ -23,7 +23,6 @@ test.describe("public landing page", () => {
     for (const label of ["iEye Secure", "How it works", "Trust & privacy", "BytesBrains"]) {
       await expect(nav.getByRole("link", { name: label })).toBeVisible();
     }
-    await expect(page.getByRole("link", { name: /^sign in$/i })).toBeVisible();
     await expect(nav.getByRole("link", { name: /scan your home/i })).toHaveAttribute("href", "/app");
   });
 

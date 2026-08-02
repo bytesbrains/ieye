@@ -20,7 +20,7 @@
 import { getRedirectResult, onAuthStateChanged, signInWithRedirect, type User } from "firebase/auth";
 import { doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, googleProvider } from "./firebase";
-import { CONSENT_VERSION } from "./useUserDoc";
+import { CONSENT_VERSION } from "./consentVersion";
 import { clearWaitlistPending, markWaitlistPending } from "./waitlistPending";
 
 /**

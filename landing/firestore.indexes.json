@@ -1,42 +1,5 @@
 {
   "//": "iEye Firestore composite indexes (#43). Single-field indexes are auto-created by Firestore; only composite (multi-field) indexes are declared here. Add new ones when the app introduces a new compound query — Firestore's emulator/console will print the exact index it needs.",
-  "indexes": [
-    {
-      "//": "User contribution history: WHERE ownerUid == me ORDER BY timestamp DESC.",
-      "collectionGroup": "contributions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "ownerUid", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "//": "Admin ledger view: WHERE method == x ORDER BY timestamp DESC.",
-      "collectionGroup": "contributions",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "method", "order": "ASCENDING" },
-        { "fieldPath": "timestamp", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "//": "Admin request queue: WHERE status == 'requested' ORDER BY createdAt ASC.",
-      "collectionGroup": "contributorRequests",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "//": "Public supporter wall ordering: WHERE displayAmount != null ORDER BY rank.",
-      "collectionGroup": "publicSupporters",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "featured", "order": "ASCENDING" },
-        { "fieldPath": "publishedAt", "order": "DESCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }
