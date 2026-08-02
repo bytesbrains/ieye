@@ -16,12 +16,21 @@ service cloud.firestore {
       return request.auth != null && request.auth.uid == uid;
     }
 
+    // Defense-in-depth: no rule here trusts an authz field on a user doc, but we
+    // still refuse to let a client PERSIST one (admin/role/claims/…), so a future
+    // rule or backend can never mistake a spoofed field for authorization.
+    function hasNoAuthzFields() {
+      return !request.resource.data.keys().hasAny(
+        ['admin', 'isAdmin', 'role', 'roles', 'claims', 'customClaims']
+      );
+    }
+
     // users — profile + early-access waitlist (name/email/consent), one doc per
     // uid. The owner reads/writes ONLY their own doc; no one can read or write
-    // another user's. (There are no authz fields here that any rule trusts, so
-    // there is nothing to escalate.)
+    // another user's, and no client may write an authz-looking field.
     match /users/{uid} {
-      allow read, create, update, delete: if isOwner(uid);
+      allow read, delete: if isOwner(uid);
+      allow create, update: if isOwner(uid) && hasNoAuthzFields();
     }
 
     // Everything else is denied for all clients. Trusted backend via the Admin

@@ -87,6 +87,26 @@ describe('users', () => {
     await assertFails(setDoc(doc(alice(), 'users/bob'), { displayName: 'spoof' }));
   });
 
+  // Defense-in-depth: no rule trusts these fields, but a client still may not
+  // persist them, so a future rule/backend can't mistake a spoof for authz.
+  test('user CANNOT create a profile carrying an authz field (admin)', async () => {
+    await assertFails(
+      setDoc(doc(alice(), 'users/alice'), { displayName: 'Alice', admin: true })
+    );
+  });
+
+  test('user CANNOT add a `role` field on update', async () => {
+    await seed((db) => setDoc(doc(db, 'users/alice'), { displayName: 'Alice' }));
+    await assertFails(updateDoc(doc(alice(), 'users/alice'), { role: 'admin' }));
+  });
+
+  test('user CANNOT smuggle in `customClaims`', async () => {
+    await seed((db) => setDoc(doc(db, 'users/alice'), { displayName: 'Alice' }));
+    await assertFails(
+      updateDoc(doc(alice(), 'users/alice'), { customClaims: { admin: true } })
+    );
+  });
+
   test('owner can update their own profile', async () => {
     await seed((db) => setDoc(doc(db, 'users/alice'), { displayName: 'Alice' }));
     await assertSucceeds(updateDoc(doc(alice(), 'users/alice'), { displayName: 'Alice N.' }));
