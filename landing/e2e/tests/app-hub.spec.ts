@@ -50,12 +50,18 @@ test.describe("/app hub — outside-in exposure teaser", () => {
     await expect(page.getByText(/Couldn.t run the check right now/i)).toBeVisible();
   });
 
-  test("install section highlights honestly and links to GitHub Releases", async ({ page }) => {
+  test("install: Win/Linux/Android download; macOS/iPhone honestly 'Available soon'", async ({ page }) => {
     await page.goto("/app");
     const install = page.locator("#install");
-    await expect(install.getByRole("heading", { name: /install the app/i })).toBeVisible();
-    const macLink = install.getByRole("link", { name: /get macOS/i });
-    await expect(macLink).toHaveAttribute("href", "https://github.com/bytesbrains/ieye/releases");
-    await expect(macLink).toHaveAttribute("target", "_blank");
+    await expect(install.getByRole("heading", { name: /run the scan/i })).toBeVisible();
+    // Available-now downloads link to GitHub Releases.
+    const dl = install.getByRole("link", { name: /^download$/i }).first();
+    await expect(dl).toHaveAttribute("href", "https://github.com/bytesbrains/ieye/releases");
+    await expect(dl).toHaveAttribute("target", "_blank");
+    // Apple platforms are honestly not downloadable yet.
+    await expect(install.getByText("macOS")).toBeVisible();
+    await expect(install.getByText(/available soon/i).first()).toBeVisible();
+    // The "use an old device you already own" nudge.
+    await expect(install.getByText(/old Windows or Linux laptop/i)).toBeVisible();
   });
 });

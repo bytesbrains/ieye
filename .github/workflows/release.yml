@@ -1,0 +1,160 @@
+name: Release
+
+# Builds the iEye app and publishes installers to a GitHub Release.
+#
+# WHAT SHIPS TODAY (no Apple account needed):
+#   - Android APK, Linux bundle, Windows build — distributable freely.
+# WHAT'S GATED (needs the Apple Developer Program — $99/yr — one membership covers
+# both): macOS (Developer ID sign + notarize) and iOS (TestFlight/App Store).
+#   - The `macos` job only runs when repo variable APPLE_SIGNING_ENABLED == 'true'
+#     and the signing secrets are set (tracked in #79).
+#   - iOS is App Store only — no downloadable binary; wire TestFlight via the App
+#     Store Connect API (fastlane) as a follow-up (#79).
+#
+# Trigger: push a tag like `v0.1.0`, or run manually with a version input.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to publish (e.g. v0.1.0)"
+        required: true
+
+permissions:
+  contents: write # create releases + upload assets
+
+env:
+  # The tag name for either trigger.
+  TAG: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  # Create the release first so the platform jobs can upload straight to it.
+  create-release:
+    name: Create draft release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create (or reuse) the release, as a draft
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — reusing."
+          else
+            gh release create "$TAG" --draft --title "iEye $TAG" --generate-notes
+          fi
+
+  android:
+    name: Android APK
+    needs: create-release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter pub get
+      # NOTE: without a release keystore this is signed with the debug key (still
+      # sideloadable). For store-grade signing, add a keystore via secrets and a
+      # signingConfig in android/app/build.gradle. TODO(#79): before public release.
+      - run: flutter build apk --release
+      - name: Upload APK to the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp build/app/outputs/flutter-apk/app-release.apk "ieye-${TAG}-android.apk"
+          gh release upload "$TAG" "ieye-${TAG}-android.apk" --clobber
+
+  linux:
+    name: Linux bundle
+    needs: create-release
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Install Linux desktop build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build libgtk-3-dev clang cmake pkg-config liblzma-dev
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter config --enable-linux-desktop
+      - run: flutter pub get
+      - run: flutter build linux --release
+      - name: Package + upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tar -czf "ieye-${TAG}-linux-x64.tar.gz" -C build/linux/x64/release/bundle .
+          gh release upload "$TAG" "ieye-${TAG}-linux-x64.tar.gz" --clobber
+
+  windows:
+    name: Windows build
+    needs: create-release
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter config --enable-windows-desktop
+      - run: flutter pub get
+      - run: flutter build windows --release
+      # Unsigned: Windows SmartScreen will warn until an OV/EV code-signing cert is
+      # added. Installable via "More info -> Run anyway". TODO(#79): sign for production.
+      - name: Package + upload
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "ieye-$env:TAG-windows-x64.zip"
+          gh release upload "$env:TAG" "ieye-$env:TAG-windows-x64.zip" --clobber
+
+  # ---- Apple, gated ---------------------------------------------------------
+  # Enable by setting repo variable APPLE_SIGNING_ENABLED = "true" and adding the
+  # secrets below once the Apple Developer Program membership exists.
+  macos:
+    name: macOS (signed + notarized)
+    needs: create-release
+    if: ${{ vars.APPLE_SIGNING_ENABLED == 'true' }}
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: 3.44.4
+          cache: true
+      - run: flutter config --enable-macos-desktop
+      - run: flutter pub get
+      - run: flutter build macos --release
+      # TODO(#79) (needs Apple Developer Program):
+      #   secrets: APPLE_CERT_P12 (base64), APPLE_CERT_PASSWORD, APPLE_TEAM_ID,
+      #            APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD (or notarytool API key).
+      #   1. import the Developer ID cert into a temp keychain,
+      #   2. codesign --deep --options runtime build/macos/Build/Products/Release/ieye.app,
+      #   3. build a .dmg (create-dmg),
+      #   4. xcrun notarytool submit --wait, then xcrun stapler staple,
+      #   5. gh release upload "$TAG" ieye-<tag>-macos.dmg --clobber
+      - name: Placeholder (signing not yet wired)
+        run: echo "Built unsigned macOS app. Add signing+notarization secrets to publish a .dmg."
+
+  # iOS is App Store only — there is no downloadable binary. Wire TestFlight via
+  # the App Store Connect API (fastlane pilot) as a separate follow-up (#79) once
+  # the Apple Developer Program membership exists.
