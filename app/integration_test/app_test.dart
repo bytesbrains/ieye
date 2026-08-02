@@ -125,5 +125,25 @@ void main() {
       expect(talkToSpecialist, findsWidgets);
       expect(fakeSafeShield, findsNothing);
     });
+
+    testWidgets('car Wi-Fi scan is honestly scoped — Wi-Fi, never the car', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        scanner: const StubScanner(settleDelay: Duration.zero),
+      );
+
+      // The car entry is reachable from the front-foot hub…
+      expect(scanMyCarEntry, findsOneWidget);
+      await goToCarScanReport(tester);
+
+      // …the same engine surfaces the exposure, but the report RESTATES the honest
+      // boundary (we see the Wi-Fi, not the systems that drive the car) and never
+      // implies the car itself is safe.
+      expect(find.text('CRITICAL'), findsWidgets);
+      expect(carScopeNote, findsWidgets);
+      expect(fakeSafeShield, findsNothing);
+    });
   });
 }

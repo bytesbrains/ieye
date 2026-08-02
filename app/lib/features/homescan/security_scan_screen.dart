@@ -4,19 +4,97 @@ import '../../core/homescan/scanner.dart';
 import '../../theme/ieye_theme.dart';
 import 'widgets/scan_report_view.dart';
 
+/// What a scan is pointed at — one engine, honest framing per surface.
+///
+/// The [car] context reaches only the car's Wi-Fi hotspot and the aftermarket
+/// gadgets on it (a dashcam, a tracker, a plug-in OBD dongle) — the same "cheap
+/// exposed device" class the home scan already finds. It can NEVER see the systems
+/// that drive the car (brakes, steering, ADAS, telematics), which ride isolated
+/// buses a Wi-Fi scan can't touch. [scopeNote] says that plainly, so no one
+/// mistakes a clean car Wi-Fi for a safe car — a false sense of car safety is
+/// worse than none (D-031: promise the mechanism, never the outcome).
+enum ScanContext {
+  home(
+    title: 'Home Security Scan',
+    introHeadline: 'Look for exposed devices in your home',
+    introBody:
+        'iEye can look at the devices on your Wi-Fi and flag cameras or gadgets '
+        'a stranger might be able to reach. It checks for known patterns — it '
+        'never signs in to anything, and it can’t promise your home is safe.',
+    consent: 'This is my own home network, and I’m allowed to scan it.',
+    action: 'Scan my home',
+    surface: 'the devices on your network',
+    scopeNote: null,
+  ),
+  car(
+    title: 'Car Wi-Fi Scan',
+    introHeadline: 'Look for exposed gadgets on your car’s Wi-Fi',
+    introBody:
+        'Many cars run a Wi-Fi hotspot, and the gadgets people add to it — a '
+        'dashcam, a tracker, a plug-in OBD dongle — can sit wide open. iEye looks '
+        'for the same exposures it finds at home. It checks known patterns, never '
+        'signs in, and can’t promise your car is safe.',
+    consent: 'This is my own car, and I’m allowed to scan its Wi-Fi.',
+    action: 'Scan my car',
+    surface: 'the gadgets on your car’s Wi-Fi',
+    scopeNote:
+        'This reaches your car’s Wi-Fi and the gadgets on it — a dashcam, a '
+        'tracker, a plug-in dongle. It can’t see the systems that drive your car '
+        '(brakes, steering, the maker’s own connection); for those, talk to your '
+        'car’s maker or a specialist.',
+  );
+
+  const ScanContext({
+    required this.title,
+    required this.introHeadline,
+    required this.introBody,
+    required this.consent,
+    required this.action,
+    required this.surface,
+    required this.scopeNote,
+  });
+
+  /// App-bar title.
+  final String title;
+
+  /// Intro headline + body.
+  final String introHeadline;
+  final String introBody;
+
+  /// The ownership affirmation copy (the consent gate).
+  final String consent;
+
+  /// The primary action label ("Scan my home" / "Scan my car").
+  final String action;
+
+  /// What the scan looks over, for the scanning-state line ("Looking over …").
+  final String surface;
+
+  /// The honest boundary, shown as a banner — or null when there's none to draw
+  /// (home). For the car, this is the whole point: Wi-Fi, not the car itself.
+  final String? scopeNote;
+}
+
 /// The Home Security Scan surface — the day-one-value feature. It looks for
 /// devices on the user's own network a stranger might reach (exposed cameras) and
-/// tells them plainly what to do. Same brand: watches OVER you, never watches you;
-/// promises the mechanism (we look for known patterns), never the outcome (never
-/// "you're now safe").
+/// tells them plainly what to do. The same engine also scans a car's Wi-Fi hotspot
+/// ([ScanContext.car]). Same brand: watches OVER you, never watches you; promises
+/// the mechanism (we look for known patterns), never the outcome (never "you're
+/// now safe").
 ///
 /// [scanner] is injectable so tests / the future real scanner drop straight in.
 /// Defaults to the [StubScanner] (demo data, no native code) so the whole flow is
-/// exercisable today.
+/// exercisable today. [scanContext] swaps the framing (home vs car) and, for the
+/// car, draws the honest-scope banner.
 class SecurityScanScreen extends StatefulWidget {
-  const SecurityScanScreen({super.key, this.scanner = const StubScanner()});
+  const SecurityScanScreen({
+    super.key,
+    this.scanner = const StubScanner(),
+    this.scanContext = ScanContext.home,
+  });
 
   final NetworkScanner scanner;
+  final ScanContext scanContext;
 
   @override
   State<SecurityScanScreen> createState() => _SecurityScanScreenState();
@@ -59,9 +137,9 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
         backgroundColor: IEyeColors.paper,
         foregroundColor: IEyeColors.charcoal,
         elevation: 0,
-        title: const Text(
-          'Home Security Scan',
-          style: TextStyle(fontWeight: FontWeight.w700),
+        title: Text(
+          widget.scanContext.title,
+          style: const TextStyle(fontWeight: FontWeight.w700),
         ),
       ),
       body: SafeArea(
@@ -69,14 +147,19 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           child: _scanning
-              ? const _Scanning()
+              ? _Scanning(context: widget.scanContext)
               : _report == null
               ? _Intro(
+                  context: widget.scanContext,
                   consented: _consented,
                   onConsentChanged: (v) => setState(() => _consented = v),
                   onScan: _runScan,
                 )
-              : _Results(report: _report!, onRescan: _runScan),
+              : _Results(
+                  report: _report!,
+                  context: widget.scanContext,
+                  onRescan: _runScan,
+                ),
         ),
       ),
     );
@@ -87,18 +170,20 @@ class _SecurityScanScreenState extends State<SecurityScanScreen> {
 /// action (enabled only once the user affirms this is their own network).
 class _Intro extends StatelessWidget {
   const _Intro({
+    required this.context,
     required this.consented,
     required this.onConsentChanged,
     required this.onScan,
   });
 
+  final ScanContext context;
   final bool consented;
   final ValueChanged<bool> onConsentChanged;
   final VoidCallback onScan;
 
   @override
-  Widget build(BuildContext context) {
-    final text = Theme.of(context).textTheme;
+  Widget build(BuildContext buildContext) {
+    final text = Theme.of(buildContext).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -110,25 +195,27 @@ class _Intro extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         Text(
-          'Look for exposed devices in your home',
+          context.introHeadline,
           style: text.headlineSmall?.copyWith(fontSize: 26),
         ),
         const SizedBox(height: 14),
-        Text(
-          'iEye can look at the devices on your Wi-Fi and flag cameras or gadgets '
-          'a stranger might be able to reach. It checks for known patterns — it '
-          'never signs in to anything, and it can’t promise your home is safe.',
-          style: text.bodyLarge,
-        ),
-        const SizedBox(height: 24),
+        Text(context.introBody, style: text.bodyLarge),
+        const SizedBox(height: 20),
+        // The honest boundary (car: Wi-Fi, not the car's driving systems). Draws
+        // nothing for the home scan, which has no such caveat.
+        _ScopeBanner(context.scopeNote),
         // The ownership gate — scanning stays disabled until this is affirmed.
-        _ConsentTile(value: consented, onChanged: onConsentChanged),
+        _ConsentTile(
+          label: context.consent,
+          value: consented,
+          onChanged: onConsentChanged,
+        ),
         const SizedBox(height: 20),
         FilledButton.icon(
           // Disabled (null) until consent is given.
           onPressed: consented ? onScan : null,
           icon: const Icon(Icons.radar),
-          label: const Text('Scan my home'),
+          label: Text(context.action),
         ),
         const SizedBox(height: 16),
         Row(
@@ -157,9 +244,14 @@ class _Intro extends StatelessWidget {
   }
 }
 
-/// The "this is my own network" affirmation. Tappable across the whole row.
+/// The ownership affirmation ("this is my own …"). Tappable across the whole row.
 class _ConsentTile extends StatelessWidget {
-  const _ConsentTile({required this.value, required this.onChanged});
+  const _ConsentTile({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+  final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -194,7 +286,7 @@ class _ConsentTile extends StatelessWidget {
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    'This is my own home network, and I’m allowed to scan it.',
+                    label,
                     style: text.bodyMedium?.copyWith(
                       fontSize: 15,
                       color: IEyeColors.charcoal,
@@ -210,11 +302,51 @@ class _ConsentTile extends StatelessWidget {
   }
 }
 
-class _Scanning extends StatelessWidget {
-  const _Scanning();
+/// The honest boundary for a scan, as an amber-bordered note. For the car this is
+/// the whole point — we see the Wi-Fi, not the car. Renders nothing when the
+/// context has no caveat to draw (home), so callers can place it unconditionally.
+class _ScopeBanner extends StatelessWidget {
+  const _ScopeBanner(this.note);
+  final String? note;
+
   @override
   Widget build(BuildContext context) {
+    final note = this.note;
+    if (note == null) return const SizedBox.shrink();
     final text = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: IEyeColors.paperDim,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: IEyeColors.amber, width: 1.2),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info_outline, color: IEyeColors.amberDeep, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              note,
+              style: text.bodyMedium?.copyWith(fontSize: 14, height: 1.35),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Scanning extends StatelessWidget {
+  const _Scanning({required this.context});
+  final ScanContext context;
+
+  @override
+  Widget build(BuildContext buildContext) {
+    final text = Theme.of(buildContext).textTheme;
     return Padding(
       padding: const EdgeInsets.only(top: 64),
       child: Column(
@@ -222,7 +354,7 @@ class _Scanning extends StatelessWidget {
           const _ScanningPulse(),
           const SizedBox(height: 32),
           Text(
-            'Looking over the devices on your network…',
+            'Looking over ${context.surface}…',
             textAlign: TextAlign.center,
             style: text.titleLarge?.copyWith(fontSize: 19),
           ),
@@ -312,15 +444,23 @@ class _ScanningPulseState extends State<_ScanningPulse>
 }
 
 class _Results extends StatelessWidget {
-  const _Results({required this.report, required this.onRescan});
+  const _Results({
+    required this.report,
+    required this.context,
+    required this.onRescan,
+  });
   final ScanReport report;
+  final ScanContext context;
   final VoidCallback onRescan;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext buildContext) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Restate the boundary on the report itself (car): a clean Wi-Fi is not a
+        // safe car. Draws nothing for the home scan.
+        _ScopeBanner(context.scopeNote),
         ScanReportView(report),
         const SizedBox(height: 28),
         OutlinedButton.icon(

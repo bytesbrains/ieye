@@ -144,6 +144,18 @@ class _SecureHero extends StatelessWidget {
             icon: const Icon(Icons.radar),
             label: const Text('Scan my home'),
           ),
+          const SizedBox(height: 6),
+          // Same scan, pointed at the car's Wi-Fi hotspot — a growing surface as
+          // cars (esp. EVs) ship hotspots and people plug in dashcams and dongles.
+          TextButton.icon(
+            onPressed: () => Navigator.of(context).pushNamed('/car-scan'),
+            style: TextButton.styleFrom(
+              foregroundColor: IEyeColors.tealDeep,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            ),
+            icon: const Icon(Icons.directions_car_outlined, size: 20),
+            label: const Text('Or scan your car’s Wi-Fi'),
+          ),
         ],
       ),
     );

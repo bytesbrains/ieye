@@ -77,6 +77,43 @@ void main() {
     // Never a green all-clear (over-trust guardrail).
     expect(find.textContaining('protected'), findsNothing);
   });
+
+  testWidgets(
+    'car scan is honestly scoped — Wi-Fi, never the systems that drive the car',
+    (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        theme: buildIEyeTheme(),
+        home: const SecurityScanScreen(
+          scanner: StubScanner(settleDelay: Duration.zero),
+          scanContext: ScanContext.car,
+        ),
+      ));
+
+      // The car framing leads, and the honest boundary is stated up front: the
+      // scan sees the car's Wi-Fi, not the systems that drive it (D-031).
+      expect(find.text('Car Wi-Fi Scan'), findsOneWidget); // app-bar title
+      expect(find.textContaining('exposed gadgets on your car'), findsOneWidget);
+      expect(find.textContaining('systems that drive your car'), findsWidgets);
+
+      // Own-car ownership gate, then scan with the car action label. The car
+      // intro is taller (scope banner + longer body), so bring controls on-screen.
+      await tester.ensureVisible(find.textContaining('my own car'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.textContaining('my own car'));
+      await tester.pump();
+      await tester.ensureVisible(find.text('Scan my car'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Scan my car'));
+      await tester.pumpAndSettle();
+
+      // The report still finds the same exposures the engine finds anywhere…
+      expect(find.text('CRITICAL'), findsWidgets);
+      // …and the boundary is RESTATED on the report — a clean Wi-Fi is not a safe
+      // car — and it never claims the car is "safe" or "protected".
+      expect(find.textContaining('systems that drive your car'), findsWidgets);
+      expect(find.textContaining('protected'), findsNothing);
+    },
+  );
 }
 
 /// A scanner that finds nothing — to exercise the honest "clean" state.

@@ -95,6 +95,31 @@ Future<void> goToScanReport(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+// ---- car Wi-Fi scan (same engine, honestly scoped) ----
+// The secondary entry on the onboarding hero, and the scan screen's own button.
+final scanMyCarEntry = find.text('Or scan your car’s Wi-Fi');
+final scanMyCar = find.text('Scan my car');
+final carConsentAffirm = find.textContaining('my own car');
+// THE honest boundary: the scan sees the car's Wi-Fi, never its driving systems.
+final carScopeNote = find.textContaining('systems that drive your car');
+
+/// From onboarding, take the car entry and run its scan to the honest report.
+/// The entry text ("…car’s Wi-Fi") and the scan button ("Scan my car") are
+/// distinct, so no offstage disambiguation is needed here.
+Future<void> goToCarScanReport(WidgetTester tester) async {
+  await tester.ensureVisible(scanMyCarEntry);
+  await tester.pumpAndSettle();
+  await tester.tap(scanMyCarEntry);
+  await tester.pumpAndSettle();
+  // On the Car Wi-Fi Scan screen — affirm ownership, then scan.
+  await tester.tap(carConsentAffirm);
+  await tester.pump();
+  await tester.ensureVisible(scanMyCar);
+  await tester.pumpAndSettle();
+  await tester.tap(scanMyCar);
+  await tester.pumpAndSettle();
+}
+
 /// Acknowledge the "found, not rescued" micro-check and arm. The gate scrolls, so
 /// bring controls on-screen before tapping.
 Future<void> passComprehensionGate(WidgetTester tester) async {

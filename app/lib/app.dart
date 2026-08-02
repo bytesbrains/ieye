@@ -85,6 +85,14 @@ class _IEyeAppState extends State<IEyeApp> {
               scanner: widget.scanner ??
                   LanScanner(wifi: const PlatformWifiSource()),
             ),
+        // Same engine, pointed at the car's Wi-Fi hotspot — finds exposed
+        // aftermarket gadgets (dashcams, OBD dongles). The screen draws the
+        // honest-scope banner: Wi-Fi, never the car's driving systems.
+        '/car-scan': (_) => SecurityScanScreen(
+              scanContext: ScanContext.car,
+              scanner: widget.scanner ??
+                  LanScanner(wifi: const PlatformWifiSource()),
+            ),
         // Checkers arrive here from an invite link (#17). Demo invite until real
         // invites are wired; the handshake itself is fully functional.
         '/checker-invite':
