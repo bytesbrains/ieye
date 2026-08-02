@@ -31,3 +31,10 @@ build/
 
 # Scratch
 tmp/
+
+# Local-only / sensitive data — NEVER commit (this repo is PUBLIC).
+# Owner-authorized security audits, network scans, device serials, credentials,
+# camera playlists. Keep such material out of history entirely.
+donotcommit_data/
+**/donotcommit_data/
+*.m3u

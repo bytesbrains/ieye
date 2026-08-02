@@ -49,6 +49,8 @@ void main() {
 
     testWidgets('a role cannot bypass the comprehension gate', (tester) async {
       await pumpApp(tester);
+      await tester.ensureVisible(forMyself);
+      await tester.pumpAndSettle();
       await tester.tap(forMyself);
       await tester.pumpAndSettle();
 
@@ -63,11 +65,15 @@ void main() {
       await pumpApp(tester);
       await goToHomeAsMyself(tester);
 
+      await tester.ensureVisible(goingDarkButton);
+      await tester.pumpAndSettle();
       await tester.tap(goingDarkButton);
       await tester.pumpAndSettle();
       expect(pausedHeadline, findsWidgets);
       expect(resumeButton, findsOneWidget);
 
+      await tester.ensureVisible(resumeButton);
+      await tester.pumpAndSettle();
       await tester.tap(resumeButton);
       await tester.pumpAndSettle();
       // Resuming returns to the honest pre-pause state — degraded, because the
@@ -82,6 +88,8 @@ void main() {
       tester,
     ) async {
       await pumpApp(tester);
+      await tester.ensureVisible(forSomeone);
+      await tester.pumpAndSettle();
       await tester.tap(forSomeone);
       await tester.pumpAndSettle();
 

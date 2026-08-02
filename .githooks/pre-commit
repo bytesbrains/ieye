@@ -1,18 +1,52 @@
 #!/bin/sh
-# pi-contrib-gate: secret scanning (VERSIONED hook).
+# pi-contrib-gate: pre-commit — lint + secret scanning (VERSIONED hook).
 #
 # This lives in the repo (unlike .git/hooks/, which git never tracks) so every
 # clone runs the same gate. Enable it once after cloning:
 #
 #     git config core.hooksPath .githooks
 #
-# (CONTRIBUTING.md "Getting set up" documents this; CI runs the same scan as a
+# (CONTRIBUTING.md "Getting set up" documents this; CI runs the same checks as a
 # server-side backstop, so a missing/bypassed local hook can't reach a branch.)
 #
-# Scans the STAGED diff with gitleaks. If gitleaks is missing we FAIL LOUDLY
-# rather than skip silently — a silently-skipped scan reads as "scanned, clean",
-# which is exactly how a secret slips through.
+# Both gates FAIL LOUDLY if their tool is missing rather than skip silently — a
+# silently-skipped check reads as "checked, clean", which is exactly how a bad
+# commit slips through.
 
+set -eu
+
+# --- 1. Lint (Dart/Flutter) --------------------------------------------------
+# Runs only when Dart sources under app/ are staged, so doc-only commits stay
+# fast. `flutter analyze` covers the whole package — fast, and catches breakage a
+# staged-only lint would miss.
+staged_dart=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^app/.*\.dart$' || true)
+if [ -n "$staged_dart" ]; then
+  flutter_bin=""
+  if command -v flutter >/dev/null 2>&1; then
+    flutter_bin="flutter"
+  elif [ -x "$HOME/development/flutter/bin/flutter" ]; then
+    flutter_bin="$HOME/development/flutter/bin/flutter"
+  elif [ -x "/opt/homebrew/bin/flutter" ]; then
+    flutter_bin="/opt/homebrew/bin/flutter"
+  fi
+
+  if [ -z "$flutter_bin" ]; then
+    echo "" >&2
+    echo "✖ pre-commit: flutter not found — lint is REQUIRED for Dart changes." >&2
+    echo "  Install Flutter or add it to PATH, then commit again." >&2
+    echo "  Emergency bypass (discouraged): git commit --no-verify" >&2
+    echo "" >&2
+    exit 1
+  fi
+
+  echo "• pre-commit: flutter analyze (app/)…" >&2
+  if ! ( cd app && "$flutter_bin" analyze ); then
+    echo "✖ pre-commit: analyze found issues — fix them (or stage the fixes)." >&2
+    exit 1
+  fi
+fi
+
+# --- 2. Secret scanning ------------------------------------------------------
 if command -v gitleaks >/dev/null 2>&1; then
   gitleaks git --staged --no-banner --redact || exit 1
 else

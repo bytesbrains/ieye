@@ -5,20 +5,20 @@
 
 > *I eye you — I watch over you.*
 
-**iEye** (`ieye.in`) is a welfare / liveness app: if someone who lives alone goes silent, the people they chose are alerted — so they are **found in hours, not weeks.**
+**iEye** (`ieye.in`) is a home guardian: it **secures your home** *and* **watches over the people in it.** One promise — *watches over you, never watches you* — pointed at two threats:
 
-A vertical product built on the [Maktub Protocol](https://maktub.it) — the existing Maktub **Beat** with the manual check-in replaced by a passive sensor. You prove you're alive by living; when activity stops, silence becomes the trigger.
+- **iEye Secure** — scan your home network in two taps and find exposed cameras, devices, or weak Wi-Fi a stranger could reach, with plain fixes (or expert help). **Value on day one.**
+- **iEye Watch** — if someone who lives alone goes silent, the people they chose are alerted, so they are **found in hours, not weeks.** **The reason we exist — you will not go unseen.**
 
-- **You will not go unseen.** iEye exists because people who live alone die undiscovered for days or weeks.
-- **Watches *over* you, never watches *you*.** Liveness is one bit, processed on-device — never the content. Privacy by architecture.
-- **Two modes:** *Sovereign* (on-chain, private, unstoppable) and *Easy* (frictionless backend + multi-channel alerts incl. auto-call).
-- **India-first**, globally available.
+Both are privacy-first: scan results and liveness are processed **on-device — never the content.** *iEye Watch* is built on the [Maktub Protocol](https://maktub.it) (the Maktub **Beat**, with the manual check-in replaced by a passive sensor — you prove you're alive by living, and silence becomes the trigger), with two delivery modes: *Sovereign* (on-chain, private, unstoppable) and *Easy* (backend + multi-channel alerts incl. auto-call). **India-first**, globally available.
+
+> **Sponsored by BytesBrains** — the company behind iEye, offering professional help to secure your premises. Every audit funds the watch-over mission.
 
 Spec & decisions: Maktub repo, issue #274.
 
 > Brand guardrail: iEye watches **over** you, never watches **you**. Always "looking out for / you are seen / never alone" — never "monitor / track / surveil."
 
-_Status: pre-development. The on-device detection brain is the first prototype; the Sovereign signing path (scoped session key) and Easy mode (backend) are still in design._
+_Status: **iEye Secure** (the on-device home scan) runs today on iOS and macOS. **iEye Watch's** detection brain is prototyped; its Sovereign signing path (scoped session key) and Easy-mode backend are still in design._
 
 ## Repository
 
