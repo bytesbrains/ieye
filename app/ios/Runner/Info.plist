@@ -9,6 +9,25 @@
 	     we look, we never sign in, nothing leaves the phone. -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>iEye looks at the devices on your Wi-Fi to find cameras or gadgets a stranger could reach. It never signs in to anything, and nothing it finds leaves your phone.</string>
+	<!-- Voice-to-text for the note on a specialist request. Used only while you
+	     hold the mic; iEye never records in the background. -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>iEye uses the microphone only when you tap the mic to speak a note for a specialist request.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>iEye turns your spoken note into text for a specialist request, only while you are speaking it.</string>
+	<!-- Google Sign-In returns to the app via this URL scheme (the reversed OAuth
+	     client id from GoogleService-Info.plist). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.184561867400-2o9f4pouck0t7op8ljj1hhb6qn4disb3</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>

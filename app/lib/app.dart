@@ -15,17 +15,34 @@ import 'features/circle/circle_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/homescan/security_scan_screen.dart';
 import 'features/onboarding/onboarding_entry_screen.dart';
+import 'features/support/auth_service.dart';
+import 'features/support/speech_input.dart';
+import 'features/support/support_repository.dart';
+import 'features/support/support_request_screen.dart';
 import 'theme/ieye_theme.dart';
 
 /// iEye app shell. Wires the shared detection brain (Tier-0 stub for now) and the
 /// product-spine routes. No trigger sink is fired anywhere yet — the prototype
 /// signs nothing and sends nothing off-device.
 class IEyeApp extends StatefulWidget {
-  const IEyeApp({super.key, this.scanner});
+  const IEyeApp({
+    super.key,
+    this.scanner,
+    this.authService,
+    this.supportRepository,
+    this.speechInput,
+  });
 
   /// Overrides the security-scan engine — E2E/previews inject a [StubScanner] for
   /// a deterministic scan; production falls back to the real dart:io [LanScanner].
   final NetworkScanner? scanner;
+
+  /// Support-request collaborators. Production falls back to the real Firebase /
+  /// device implementations; tests inject fakes so the flow is deterministic and
+  /// never touches Firebase.
+  final AuthService? authService;
+  final SupportRepository? supportRepository;
+  final SpeechInput? speechInput;
 
   @override
   State<IEyeApp> createState() => _IEyeAppState();
@@ -92,6 +109,16 @@ class _IEyeAppState extends State<IEyeApp> {
               scanContext: ScanContext.car,
               scanner: widget.scanner ??
                   LanScanner(wifi: const PlatformWifiSource()),
+            ),
+        // Raise a request for professional help (iEye Secure → a BytesBrains
+        // specialist). The scan to attach rides in as a route argument. Real
+        // Firebase/auth/speech in production; tests inject fakes.
+        '/support-request': (context) => SupportRequestScreen(
+              report: ModalRoute.of(context)?.settings.arguments as ScanReport?,
+              auth: widget.authService ?? FirebaseAuthService(),
+              repository:
+                  widget.supportRepository ?? FirestoreSupportRepository(),
+              speech: widget.speechInput ?? DeviceSpeechInput(),
             ),
         // Checkers arrive here from an invite link (#17). Demo invite until real
         // invites are wired; the handshake itself is fully functional.

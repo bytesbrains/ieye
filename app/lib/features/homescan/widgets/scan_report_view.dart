@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../../core/homescan/home_scan_model.dart';
 import '../../../core/homescan/scanner.dart';
@@ -18,26 +17,45 @@ class ScanReportView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _ExposureOverview(report),
-        const SizedBox(height: 24),
-        if (report.wifi != null) ...[
-          _WifiSection(report.wifi!),
-          const SizedBox(height: 16),
+    // Expose the report to descendants so the specialist CTA can attach it to a
+    // support request without threading it through every widget.
+    return _ScanReportScope(
+      report: report,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ExposureOverview(report),
+          const SizedBox(height: 24),
+          if (report.wifi != null) ...[
+            _WifiSection(report.wifi!),
+            const SizedBox(height: 16),
+          ],
+          for (final device in report.flagged) ...[
+            _DeviceCard(device),
+            const SizedBox(height: 16),
+          ],
+          if (report.cleanDeviceCount > 0)
+            _CleanDevicesNote(report.cleanDeviceCount),
+          const SizedBox(height: 20),
+          const _HonestFooter(),
         ],
-        for (final device in report.flagged) ...[
-          _DeviceCard(device),
-          const SizedBox(height: 16),
-        ],
-        if (report.cleanDeviceCount > 0)
-          _CleanDevicesNote(report.cleanDeviceCount),
-        const SizedBox(height: 20),
-        const _HonestFooter(),
-      ],
+      ),
     );
   }
+}
+
+/// Carries the current [ScanReport] down to the specialist CTA, so tapping "Talk
+/// to a specialist" can attach the scan to the support request.
+class _ScanReportScope extends InheritedWidget {
+  const _ScanReportScope({required this.report, required super.child});
+  final ScanReport report;
+
+  static ScanReport? of(BuildContext context) => context
+      .dependOnInheritedWidgetOfExactType<_ScanReportScope>()
+      ?.report;
+
+  @override
+  bool updateShouldNotify(_ScanReportScope old) => old.report != report;
 }
 
 /// The exposure overview — the report's headline card: an honest urgency
@@ -887,43 +905,20 @@ class _FixOwnerChip extends StatelessWidget {
 class _SpecialistButton extends StatelessWidget {
   const _SpecialistButton();
 
-  /// How long to wait on the platform's clipboard before giving up on the
-  /// claim. Real writes answer in milliseconds; the bound exists so a platform
-  /// that never replies can't swallow the message the user is waiting for.
-  static const _copyTimeout = Duration(seconds: 2);
-
-  // In-app booking (findings + your details, one tap) lands next PR. Until then,
-  // point people to the BytesBrains inbox and copy the address so it's one tap.
-  // The write is awaited so "we've copied it" is only claimed once it's true
-  // (review #81 / wrokin); if the clipboard is denied or silent, the message
-  // still carries the address — it just drops the claim.
-  Future<void> _contact(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
-    var copied = true;
-    try {
-      await Clipboard.setData(
-        const ClipboardData(text: kBytesBrainsContactEmail),
-      ).timeout(_copyTimeout);
-    } catch (_) {
-      copied = false;
-    }
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(
-          copied
-              ? 'Email $kBytesBrainsContactEmail — we’ve copied it for you. '
-                    'A BytesBrains specialist can close this safely.'
-              : 'Email $kBytesBrainsContactEmail. '
-                    'A BytesBrains specialist can close this safely.',
-        ),
-      ),
+  // Open the request flow, attaching the current scan so the user can (opt-in)
+  // share it. The report rides in as a route argument, read from the scope.
+  // (This replaces the earlier email/clipboard stopgap from #81.)
+  void _talkToSpecialist(BuildContext context) {
+    Navigator.of(context).pushNamed(
+      '/support-request',
+      arguments: _ScanReportScope.of(context),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return TextButton.icon(
-      onPressed: () => _contact(context),
+      onPressed: () => _talkToSpecialist(context),
       style: TextButton.styleFrom(
         foregroundColor: IEyeColors.tealDeep,
         padding: const EdgeInsets.symmetric(horizontal: 4),

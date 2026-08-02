@@ -33,6 +33,18 @@ service cloud.firestore {
       allow create, update: if isOwner(uid) && hasNoAuthzFields();
     }
 
+    // support_requests — a signed-in user files a request for professional help
+    // from iEye Secure (a callback number/time, an optional note, and — only if
+    // they opted in — a scan summary + timezone/area). Write-once and owner-scoped:
+    // a client may CREATE its own request (userId must equal its uid, no authz
+    // fields) but can NEVER read the queue or alter a request. The BytesBrains team
+    // reads/triages via the Admin SDK / console (rules don't apply to it).
+    match /support_requests/{id} {
+      allow create: if isOwner(request.resource.data.userId)
+                    && hasNoAuthzFields();
+      allow read, update, delete: if false;
+    }
+
     // Everything else is denied for all clients. Trusted backend via the Admin
     // SDK bypasses rules entirely and is governed by its own threat model.
     match /{document=**} {

@@ -6,6 +6,9 @@ import 'package:ieye/core/homescan/scanner.dart';
 import 'package:ieye/core/trigger_sink.dart';
 import 'package:ieye/core/welfare_signal.dart';
 import 'package:ieye/features/checker/checker_invite_screen.dart';
+import 'package:ieye/features/support/auth_service.dart';
+import 'package:ieye/features/support/support_repository.dart';
+import 'package:ieye/features/support/support_request.dart';
 
 /// Shared E2E helpers. Keep finders + flows here so each new feature test reads
 /// like prose and we don't duplicate brittle lookups as the app grows. Add a
@@ -23,10 +26,49 @@ class ReachSink implements TriggerSink {
   Future<void> fire(WelfareSignal signal) async {}
 }
 
+/// A fake sign-in for the support-flow E2E: starts signed-out, "authenticates"
+/// instantly. Keeps Firebase out of the on-device test entirely.
+class FakeAuth implements AuthService {
+  AuthUser? _current;
+  @override
+  AuthUser? get currentUser => _current;
+  @override
+  Future<AuthUser?> signInWithGoogle() async =>
+      _current = const AuthUser(uid: 'g1', displayName: 'Test User');
+  @override
+  Future<AuthUser?> signInWithApple() async =>
+      _current = const AuthUser(uid: 'a1', displayName: 'Apple User');
+  @override
+  Future<void> signOut() async => _current = null;
+}
+
+/// A fake support sink that captures the submitted request (no Firestore).
+class FakeSupportRepo implements SupportRepository {
+  SupportRequest? request;
+  @override
+  Future<String> submit({
+    required AuthUser user,
+    required SupportRequest request,
+  }) async {
+    this.request = request;
+    return 'req_e2e';
+  }
+}
+
 /// Boot the real app and let it settle. [scanner] injects a deterministic scan
-/// engine (a StubScanner) for the security-scan E2E; production uses the real one.
-Future<void> pumpApp(WidgetTester tester, {NetworkScanner? scanner}) async {
-  await tester.pumpWidget(IEyeApp(scanner: scanner));
+/// engine (a StubScanner); [auth]/[repo] inject fakes for the support-request E2E
+/// so it never touches Firebase. Production uses the real implementations.
+Future<void> pumpApp(
+  WidgetTester tester, {
+  NetworkScanner? scanner,
+  AuthService? auth,
+  SupportRepository? repo,
+}) async {
+  await tester.pumpWidget(IEyeApp(
+    scanner: scanner,
+    authService: auth,
+    supportRepository: repo,
+  ));
   await tester.pumpAndSettle();
 }
 
@@ -97,6 +139,15 @@ Future<void> goToScanReport(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 300));
 }
+
+// ---- talk to a specialist (the support-request flow) ----
+// `talkToSpecialist` is defined above (the scan-report CTA). These are the
+// support screen's own landmarks.
+final supportSignInHeadline = find.textContaining('Sign in so we can reach you');
+final continueWithGoogle = find.text('Continue with Google');
+final supportFormHeadline = find.text('A specialist will call you back');
+final sendRequest = find.text('Send my request');
+final requestSent = find.text('Request sent');
 
 // ---- car Wi-Fi scan (same engine, honestly scoped) ----
 // The secondary entry on the onboarding hero, and the scan screen's own button.

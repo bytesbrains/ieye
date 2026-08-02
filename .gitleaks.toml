@@ -38,4 +38,14 @@ paths = [
   # deliberately NOT allowlisted — they're scanned, so a secret pasted into one
   # is still caught; gitleaks' default rules don't flag npm integrity hashes.)
   '''(^|/)node_modules/''',
+
+  # FlutterFire-generated Firebase CLIENT config. The "apiKey" in these files is a
+  # public project identifier that is DESIGNED to ship in client apps and be
+  # committed — it is not a secret. Access is gated by Firestore Security Rules
+  # (support_requests is write-only + owner-scoped) and App Check, never by hiding
+  # this key. See Firebase docs: "Learn about using and managing API keys for
+  # Firebase." Narrowly scoped to the exact generated filenames.
+  '''(^|/)firebase_options\.dart$''',
+  '''(^|/)google-services\.json$''',
+  '''(^|/)GoogleService-Info\.plist$''',
 ]

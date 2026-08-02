@@ -28,5 +28,10 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- Voice-to-text for a specialist-request note (used only while speaking). -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>iEye uses the microphone only when you tap the mic to speak a note for a specialist request.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>iEye turns your spoken note into text for a specialist request, only while you are speaking it.</string>
 </dict>
 </plist>
