@@ -35,6 +35,13 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Front foot: Home Security is now the hero — the value felt
+                  // today, and the BytesBrains funnel. The welfare watch follows
+                  // as the deeper capability: sequenced, never dropped.
+                  const _SecurityHero(),
+                  const SizedBox(height: 36),
+                  const _WatchOverSectionHeader(),
+                  const SizedBox(height: 20),
                   _StatusHeadline(c),
                   const SizedBox(height: 24),
                   _CoverageFacts(c),
@@ -55,12 +62,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                     onResume: widget.brain.resume,
                   ),
-                  const SizedBox(height: 32),
-                  // Day-one value: a home-network security scan (finds exposed
-                  // cameras/IoT). Same guardian-eye promise, pointed at a threat
-                  // the user can feel today — not a competing primary action, so
-                  // it reads as a calm entry, not another amber CTA.
-                  const _SecurityScanEntry(),
                   const SizedBox(height: 32),
                   Text(
                     'iEye watches over you, never watches you. It reads a sign of '
@@ -270,52 +271,80 @@ class _HonestNote extends StatelessWidget {
   }
 }
 
-/// The home-screen entry to the Home Security Scan (day-one value). A calm,
-/// tappable card — not an amber CTA — so it never competes with the welfare
-/// status above it. Copy stays on-brand: protect you FROM being watched.
-class _SecurityScanEntry extends StatelessWidget {
-  const _SecurityScanEntry();
+/// The home's HERO — Home Security, the front-foot capability. Leads with value
+/// the user can feel today; the amber CTA is the primary action here. Copy is
+/// calm and factual — no fear-selling, and never the banned word "protected"
+/// (the over-trust guardrail, enforced by the E2E finders).
+class _SecurityHero extends StatelessWidget {
+  const _SecurityHero();
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Semantics(
-      button: true,
-      child: Material(
-        color: IEyeColors.paperDim,
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () => Navigator.of(context).pushNamed('/security-scan'),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Row(
-              children: [
-                const Icon(Icons.wifi_find_outlined,
-                    color: IEyeColors.tealDeep, size: 26),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Home security scan',
-                          style: text.titleLarge?.copyWith(fontSize: 17)),
-                      const SizedBox(height: 3),
-                      Text(
-                        'Find cameras or gadgets a stranger could reach.',
-                        style: text.bodyMedium?.copyWith(
-                            fontSize: 14, color: IEyeColors.charcoalSoft),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right,
-                    color: IEyeColors.charcoalMuted),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.wifi_find_outlined,
+                color: IEyeColors.tealDeep, size: 30),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'See what a stranger could reach in your home',
+                style: text.headlineSmall?.copyWith(fontSize: 25),
+              ),
             ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'iEye checks the devices on your Wi-Fi and flags cameras, gadgets, or '
+          'weak Wi-Fi that could be exposed — in two taps. The scan stays on your '
+          'phone.',
+          style: text.bodyLarge,
+        ),
+        const SizedBox(height: 20),
+        FilledButton.icon(
+          onPressed: () => Navigator.of(context).pushNamed('/security-scan'),
+          icon: const Icon(Icons.radar),
+          label: const Text('Scan my home'),
+        ),
+      ],
+    );
+  }
+}
+
+/// Introduces the deeper capability — the welfare watch. It sits BELOW security
+/// now (sequenced, not dropped) and stays the emotional "why": no one who lives
+/// alone is left unseen. The honest coverage renders directly beneath it.
+class _WatchOverSectionHeader extends StatelessWidget {
+  const _WatchOverSectionHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: Color(0x22000000), height: 1),
+        const SizedBox(height: 24),
+        Semantics(
+          header: true,
+          child: Text(
+            'Watch over someone who lives alone',
+            style: text.titleLarge?.copyWith(fontSize: 20),
           ),
         ),
-      ),
+        const SizedBox(height: 8),
+        Text(
+          'The same guardian keeps watch for the people who live alone — so if '
+          'someone goes silent, the people they chose are told. This is why iEye '
+          'exists.',
+          style: text.bodyMedium?.copyWith(color: IEyeColors.charcoalSoft),
+        ),
+      ],
     );
   }
 }

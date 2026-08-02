@@ -115,6 +115,10 @@ void main() {
     await tester.pumpWidget(MaterialApp(home: HomeScreen(brain: brain)));
     await tester.pumpAndSettle();
 
+    // The welfare watch now sits below the security hero, so scroll the control
+    // into view before tapping (mirrors the integration finders).
+    await tester.ensureVisible(find.textContaining('going dark'));
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining('going dark'));
     await tester.pumpAndSettle();
 
