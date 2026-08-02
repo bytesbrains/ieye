@@ -23,46 +23,67 @@ interface InternetDbResponse {
   vulns?: string[];
 }
 
+// The shaped result of a passive exposure lookup.
+type ExposureResult =
+  | { status: "unknown"; ip: string | null }
+  | { status: "clean"; ip: string; cgnat: boolean }
+  | { status: "error"; ip: string }
+  | {
+      status: "exposed";
+      ip: string;
+      cgnat: boolean;
+      ports: number[];
+      vulns: string[];
+      tags: string[];
+      hostnames: string[];
+    };
+
+const arr = <T>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : []);
+
+// The passive lookup + result shaping — the one place with real branching, kept
+// OUT of the HTTP handler (SRP) and with `fetchImpl` injectable so it's unit-
+// testable without a live network or the emulator.
+export async function lookupExposure(
+  ip: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ExposureResult> {
+  try {
+    const r = await fetchImpl(`https://internetdb.shodan.io/${ip}`, {
+      headers: { "User-Agent": "iEye-exposure-check (+https://ieye.in)" },
+      signal: AbortSignal.timeout(9000),
+    });
+    if (r.status === 404) return { status: "clean", ip, cgnat: isCgnatV4(ip) }; // Shodan has no record
+    if (!r.ok) return { status: "error", ip };
+    const data = (await r.json()) as InternetDbResponse;
+    const ports = arr(data.ports);
+    const vulns = arr(data.vulns);
+    if (ports.length === 0 && vulns.length === 0) return { status: "clean", ip, cgnat: isCgnatV4(ip) };
+    return {
+      status: "exposed",
+      ip,
+      cgnat: isCgnatV4(ip),
+      ports,
+      vulns,
+      tags: arr(data.tags),
+      hostnames: arr(data.hostnames),
+    };
+  } catch (err) {
+    logger.warn("exposureCheck lookup failed", { err: String(err) });
+    return { status: "error", ip };
+  }
+}
+
+// Thin HTTP handler: extract the caller's own IP, guard the private/loopback case
+// ("unknown", never a false clean), and delegate the branching to lookupExposure.
 export const exposureCheck = onRequest(
   { cors: true, maxInstances: 5, timeoutSeconds: 20 },
   async (req, res) => {
     const ip = clientIp(req);
-    // A private/loopback source means we truly can't see out (e.g. local dev, or
-    // some VPNs) — report "unknown", never a misleading "clean".
     if (!ip || isPrivateV4(ip)) {
       res.json({ status: "unknown", ip: ip ?? null });
       return;
     }
-    try {
-      const r = await fetch(`https://internetdb.shodan.io/${ip}`, {
-        headers: { "User-Agent": "iEye-exposure-check (+https://ieye.in)" },
-        signal: AbortSignal.timeout(9000),
-      });
-      // 404 = Shodan has no record for this IP.
-      if (r.status === 404) {
-        res.json({ status: "clean", ip, cgnat: isCgnatV4(ip) });
-        return;
-      }
-      if (!r.ok) {
-        res.json({ status: "error", ip });
-        return;
-      }
-      const data = (await r.json()) as InternetDbResponse;
-      const ports = Array.isArray(data.ports) ? data.ports : [];
-      const vulns = Array.isArray(data.vulns) ? data.vulns : [];
-      res.json({
-        status: ports.length > 0 || vulns.length > 0 ? "exposed" : "clean",
-        ip,
-        cgnat: isCgnatV4(ip),
-        ports,
-        vulns,
-        tags: Array.isArray(data.tags) ? data.tags : [],
-        hostnames: Array.isArray(data.hostnames) ? data.hostnames : [],
-      });
-    } catch (err) {
-      logger.warn("exposureCheck lookup failed", { err: String(err) });
-      res.json({ status: "error", ip });
-    }
+    res.json(await lookupExposure(ip));
   }
 );
 
