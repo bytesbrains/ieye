@@ -43,6 +43,61 @@ void main() {
       expect(kinds, contains(FindingKind.defaultCredentialsLikely));
       expect(kinds, contains(FindingKind.knownVulnerableFirmware));
     });
+
+    test('flags the open live stream (RTSP served on the LAN)', () {
+      final stream = engine
+          .assess(obs)
+          .findings
+          .firstWhere((f) => f.kind == FindingKind.exposedCameraStream);
+      expect(stream.severity, Severity.high);
+      // Detect-not-view: we report the stream is offered, never that we opened it.
+      expect(stream.whatItMeans, contains('never opens it'));
+      expect(stream.verified, isFalse);
+    });
+  });
+
+  group('Recorder — an NVR/DVR holding stored footage', () {
+    // A Dahua-style recorder: DVRIP (37777) + a DVR web UI, restreaming RTSP.
+    final obs = const DeviceObservation(
+      ip: '192.168.0.201',
+      openPorts: {80, 554, 37777},
+      httpServerBanner: 'DVR-Webs',
+    );
+
+    test('classifies as an NVR/DVR, not a plain camera', () {
+      expect(engine.assess(obs).deviceClass, DeviceClass.nvr);
+    });
+
+    test('flags the reachable recorder — the stored archive, not just live', () {
+      final r = engine.assess(obs);
+      final rec = r.findings
+          .firstWhere((f) => f.kind == FindingKind.exposedRecorder);
+      expect(rec.severity, Severity.high);
+      expect(rec.whatItMeans, contains('saved recordings'));
+      // A recorder restreams too, so the open-stream finding rides along.
+      expect(
+        r.findings.map((f) => f.kind),
+        contains(FindingKind.exposedCameraStream),
+      );
+      // Passive tier: inferred from the open port, never signed into.
+      expect(r.findings.every((f) => f.verified == false), isTrue);
+    });
+
+    test('a recorder without an RTSP port flags storage but not a stream', () {
+      final kinds = engine
+          .assess(
+            const DeviceObservation(
+              ip: '192.168.0.202',
+              openPorts: {80, 37777},
+              httpServerBanner: 'NVR',
+            ),
+          )
+          .findings
+          .map((f) => f.kind)
+          .toSet();
+      expect(kinds, contains(FindingKind.exposedRecorder));
+      expect(kinds, isNot(contains(FindingKind.exposedCameraStream)));
+    });
   });
 
   group('Group B — XM family hidden behind nginx (RTSP magic tell)', () {

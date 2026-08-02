@@ -92,7 +92,10 @@ Future<void> goToScanReport(WidgetTester tester) async {
   await tester.ensureVisible(scanMyHome);
   await tester.pumpAndSettle();
   await tester.tap(scanMyHome);
-  await tester.pumpAndSettle();
+  // The report's CRITICAL chip pulses forever, so pumpAndSettle would time out —
+  // pump the report into place instead (the standard idiom for a live animation).
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 // ---- car Wi-Fi scan (same engine, honestly scoped) ----
@@ -117,7 +120,9 @@ Future<void> goToCarScanReport(WidgetTester tester) async {
   await tester.ensureVisible(scanMyCar);
   await tester.pumpAndSettle();
   await tester.tap(scanMyCar);
-  await tester.pumpAndSettle();
+  // As above: the report animates, so pump it into place rather than settle.
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 /// Acknowledge the "found, not rescued" micro-check and arm. The gate scrolls, so

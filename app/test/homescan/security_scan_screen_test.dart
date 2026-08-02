@@ -40,11 +40,27 @@ void main() {
     await tester.tap(find.textContaining("my own home network"));
     await tester.pump();
     await tester.tap(find.text('Scan my home'));
-    await tester.pumpAndSettle();
+    // The report's CRITICAL chip pulses forever, so pumpAndSettle would time out;
+    // pump the report into place (settleDelay is zero) and assert on it.
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 50));
 
     // Report state: the CRITICAL finding surfaces, badged by WORD (not colour).
     expect(find.textContaining('reachable from the internet'), findsOneWidget);
     expect(find.text('CRITICAL'), findsWidgets);
+
+    // The pulsing critical alert draws the eye to internet-reachable exposure.
+    expect(find.textContaining('CRITICAL EXPOSURE'), findsOneWidget);
+
+    // Stream-exposure and recorder findings both surface (detect-not-view).
+    expect(
+      find.textContaining('live video is being served'),
+      findsWidgets,
+    );
+    expect(
+      find.textContaining('recorder holding your saved footage'),
+      findsOneWidget,
+    );
 
     // Honesty: passive findings are tagged "not confirmed", never claimed proven.
     expect(find.textContaining('not confirmed'), findsWidgets);
@@ -104,7 +120,9 @@ void main() {
       await tester.ensureVisible(find.text('Scan my car'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Scan my car'));
-      await tester.pumpAndSettle();
+      // Report animates (pulsing critical chip) — pump it in rather than settle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
       // The report still finds the same exposures the engine finds anywhere…
       expect(find.text('CRITICAL'), findsWidgets);

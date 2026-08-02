@@ -82,6 +82,12 @@ class _ExposureOverview extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // A gently pulsing alert when something may be reachable from outside
+          // the home right now — the one place the report earns urgency.
+          if (worst == Severity.critical) ...[
+            _CriticalAlertChip(report.criticalCount),
+            const SizedBox(height: 16),
+          ],
           Semantics(
             header: true,
             liveRegion: true,
@@ -138,6 +144,85 @@ class _ExposureOverview extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// A gently pulsing CRITICAL chip — draws the eye to an exposure that may be
+/// reachable from outside the home right now.
+///
+/// Deliberately NOT a strobe: it breathes at ~0.8 Hz (a slow beacon pulse), well
+/// under the WCAG 2.3.1 flashing threshold — a hard blink is a seizure risk and
+/// off-brand (a lighthouse sweeps, it doesn't flash an alarm). Warm beacon-amber,
+/// never alarm-red. The motion is only an ENHANCEMENT on top of icon + WORD +
+/// count, and it honours reduced-motion (renders static then), so nothing depends
+/// on the animation to be understood.
+class _CriticalAlertChip extends StatefulWidget {
+  const _CriticalAlertChip(this.count);
+  final int count;
+
+  @override
+  State<_CriticalAlertChip> createState() => _CriticalAlertChipState();
+}
+
+class _CriticalAlertChipState extends State<_CriticalAlertChip>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1300),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const color = IEyeColors.amberDeep;
+    final reduceMotion =
+        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color, width: 1.4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.priority_high_rounded, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            widget.count == 1
+                ? 'CRITICAL EXPOSURE'
+                : 'CRITICAL EXPOSURE · ${widget.count}',
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Semantics(
+      liveRegion: true,
+      label: 'Critical exposure: ${widget.count}',
+      child: reduceMotion
+          ? chip
+          : FadeTransition(
+              opacity: _c.drive(
+                Tween(begin: 0.55, end: 1.0)
+                    .chain(CurveTween(curve: Curves.easeInOut)),
+              ),
+              child: chip,
+            ),
     );
   }
 }

@@ -51,6 +51,16 @@ enum FindingKind {
   /// defence. The scariest and most common real-world finding.
   exposedCameraCloudP2P,
 
+  /// A camera's live video is being served on the network (an open RTSP/HTTP
+  /// stream). Anyone on the Wi-Fi can try to watch it; if the router forwards the
+  /// port, so can the internet. Detected by the open stream port — NEVER opened.
+  exposedCameraStream,
+
+  /// A video recorder (NVR/DVR) — where days/weeks of footage are STORED — is
+  /// reachable on the network with its management/playback service open. Worse
+  /// than a single live view: it's the whole archive. Detected, never signed into.
+  exposedRecorder,
+
   /// Device family that ships with a blank / well-known default admin password
   /// that is frequently never changed. INFERRED from fingerprint, not tested.
   defaultCredentialsLikely,

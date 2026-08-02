@@ -102,8 +102,9 @@ class StubScanner implements NetworkScanner {
   }
 
   /// Representative demo devices: four XiongMai cameras (cloud/P2P on), two units
-  /// hidden behind nginx, a TP-Link router, and one quiet host. Private RFC1918
-  /// addresses and public product strings only — no serials, no credentials.
+  /// hidden behind nginx, a DVR holding stored footage, a TP-Link router, and one
+  /// quiet host. Private RFC1918 addresses and public product strings only — no
+  /// serials, no credentials.
   static const List<DeviceObservation> _demoObservations = [
     DeviceObservation(
       ip: '192.168.0.148',
@@ -136,6 +137,13 @@ class StubScanner implements NetworkScanner {
       openPorts: {80, 554, 8000},
       httpServerBanner: 'nginx',
       rtspMediaMagic: '494D4B48',
+    ),
+    // A network video recorder — the box that stores the footage. Dahua-style
+    // DVRIP (37777) + a DVR web UI, restreaming over RTSP.
+    DeviceObservation(
+      ip: '192.168.0.201',
+      openPorts: {80, 554, 37777},
+      httpServerBanner: 'DVR-Webs',
     ),
     DeviceObservation(
       ip: '192.168.0.1',

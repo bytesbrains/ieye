@@ -31,6 +31,7 @@ class FingerprintEngine {
       case DeviceClass.accessPoint:
         findings.addAll(_routerFindings(obs));
       case DeviceClass.nvr:
+        findings.addAll(_recorderFindings(obs));
       case DeviceClass.iot:
       case DeviceClass.computer:
       case DeviceClass.unknown:
@@ -60,6 +61,16 @@ class FingerprintEngine {
       return (DeviceClass.ipCamera, 'XiongMai / Sofia', model);
     }
 
+    // A recorder (NVR/DVR) — where stored footage lives. The Dahua DVRIP port
+    // (37777) is a strong recorder tell; some also serve an explicit DVR/NVR
+    // banner. Checked before the generic camera rule so a recorder that also
+    // restreams RTSP isn't mistaken for a plain camera.
+    final isRecorder =
+        obs.hasPort(37777) || banner.contains('dvr') || banner.contains('nvr');
+    if (isRecorder) {
+      return (DeviceClass.nvr, null, _grepModel(obs.httpServerBanner));
+    }
+
     // A device serving RTSP (554) alongside a web UI, without the XM pair, is
     // still most likely a camera/NVR.
     if (obs.hasPort(554) && obs.hasPort(80)) {
@@ -82,6 +93,11 @@ class FingerprintEngine {
   List<Finding> _cameraFindings(DeviceObservation obs, String? family) {
     final out = <Finding>[];
     final isXm = family != null && family.startsWith('XiongMai');
+
+    // The live stream itself, served on the LAN (RTSP/554). Distinct from the
+    // cloud/P2P path: this is the raw feed offered to anyone who reaches the
+    // network. We see the door is open; we never walk through it.
+    if (obs.hasPort(554)) out.add(_streamExposure(obs.ip));
 
     if (isXm) {
       // §5.2 — cloud/P2P by default → reachable from the internet by serial. NAT
@@ -160,6 +176,59 @@ class FingerprintEngine {
         fixOwner: FixOwner.specialist,
       ));
     }
+    return out;
+  }
+
+  /// The live-stream-reachable finding, shared by cameras and recorders (both
+  /// serve RTSP). It flags that the video is *offered* on the network — detected
+  /// from the open stream port, never by opening the stream (guardian eye, never a
+  /// lens; the exposure, never the content).
+  Finding _streamExposure(String ip) => Finding(
+    kind: FindingKind.exposedCameraStream,
+    severity: Severity.high,
+    deviceIp: ip,
+    title: 'Its live video is being served on your network',
+    whatItMeans:
+        'The camera offers its video over a standard streaming port (RTSP). Any '
+        'device on your Wi-Fi can try to watch it, and if your router forwards '
+        'that port, so could someone on the internet. iEye can see the stream is '
+        'offered here — it never opens it.',
+    remediation: const [
+      'Set a strong password on the camera so the stream isn’t open to anyone.',
+      'Make sure your router isn’t forwarding the camera’s ports to the internet.',
+      'Best: put cameras on their own network so only you can reach the stream '
+          '(a specialist can set this up).',
+    ],
+    fixOwner: FixOwner.user,
+  );
+
+  /// Recorder (NVR/DVR) findings — the box that STORES footage. Its exposure is
+  /// worse in kind than a single live view: it holds days or weeks of history.
+  List<Finding> _recorderFindings(DeviceObservation obs) {
+    final out = <Finding>[
+      Finding(
+        kind: FindingKind.exposedRecorder,
+        severity: Severity.high,
+        deviceIp: obs.ip,
+        title: 'A recorder holding your saved footage is reachable here',
+        whatItMeans:
+            'This is a video recorder (an NVR/DVR) — it keeps days or weeks of '
+            'footage from your cameras. It’s answering on your network with its '
+            'management and playback service open. If its password is weak or '
+            'still the factory default, someone who reaches it could watch your '
+            'saved recordings, not just the live view. iEye can see it’s '
+            'reachable — it never signs in.',
+        remediation: const [
+          'Set a strong, unique password on the recorder now.',
+          'Don’t forward the recorder’s ports to the internet.',
+          'Best: keep the recorder on its own network, reachable only by you '
+              '(a specialist can set this up).',
+        ],
+        fixOwner: FixOwner.specialist,
+      ),
+    ];
+    // A recorder usually restreams its cameras' live video too (RTSP).
+    if (obs.hasPort(554)) out.add(_streamExposure(obs.ip));
     return out;
   }
 
