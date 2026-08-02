@@ -1,28 +1,26 @@
 import { Link } from "react-router-dom";
 import { Wordmark } from "./Brand";
 import { HonestyLine } from "./HonestyLine";
-import { LEGAL } from "../lib/legalCopy";
 
 export function Footer() {
   return (
     <footer className="border-t border-charcoal/10 bg-paper">
-      {/* Join / belonging beat */}
+      {/* Closing beat — one guardian, two threats. */}
       <div className="section">
         <div className="container-prose text-center">
           <h2 className="text-3xl font-semibold sm:text-4xl">
-            Help should reach people in time. Too often it doesn&rsquo;t.
+            Secure your home. Watch over the people in it.
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-charcoal-soft">
-            iEye only stays alive if people who agree with that keep it running. Give your skills,
-            lend a hand, or just tell the person you&rsquo;re worried about. If it helps even one
-            person get help in time, it has done everything we hoped.
+            iEye is one guardian for both — the app is free and open-source, and BytesBrains is here
+            when you want a person to make your home safe.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <a href="#waitlist" className="btn btn-primary">
-              Notify me when it opens
-            </a>
-            <a href="#contribute" className="btn btn-secondary">
-              Help build iEye
+            <Link to="/app" className="btn btn-primary">
+              Scan your home
+            </Link>
+            <a href="mailto:contact@bytesbrains.com" className="btn btn-secondary">
+              Talk to BytesBrains
             </a>
           </div>
         </div>
@@ -33,17 +31,20 @@ export function Footer() {
           <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
             <Wordmark />
             <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 text-base">
+              <a href="#secure" className="text-charcoal-soft hover:text-charcoal">
+                iEye Secure
+              </a>
               <a href="#how-it-works" className="text-charcoal-soft hover:text-charcoal">
                 How it works
               </a>
               <a href="#trust" className="text-charcoal-soft hover:text-charcoal">
                 Trust &amp; privacy
               </a>
-              <a href="#contribute" className="text-charcoal-soft hover:text-charcoal">
-                Ways to help
+              <a href="#bytesbrains" className="text-charcoal-soft hover:text-charcoal">
+                BytesBrains
               </a>
-              <a href="#transparency" className="text-charcoal-soft hover:text-charcoal">
-                Transparency
+              <a href="#open-source" className="text-charcoal-soft hover:text-charcoal">
+                Open source
               </a>
               <Link to="/privacy" className="text-charcoal-soft hover:text-charcoal">
                 Privacy
@@ -56,16 +57,13 @@ export function Footer() {
 
           <div className="mt-8 max-w-prose space-y-3">
             <HonestyLine />
-            {/* Canonical contribution disclaimer — single source of truth (lib/legalCopy).
-                Was a near-duplicate paraphrase; reconciled per PR #50 so footer + CTA
-                render identical, Legal-approved wording. */}
-            <p className="text-sm text-charcoal-muted">{LEGAL.contributionDisclaimerShort}</p>
             <p className="text-sm text-charcoal-muted">
-              iEye is a free, open public good, built on the Maktub Protocol. There is no iEye token
-              and no investment offer.
+              iEye is free and open-source (MIT), built on the Maktub Protocol. Professional help to
+              secure your premises is provided by BytesBrains, the company behind iEye. There is no
+              iEye token and no investment offer.
             </p>
             <p className="text-sm text-charcoal-muted">
-              &copy; {new Date().getFullYear()} iEye. A welfare app for people who live alone.
+              &copy; {new Date().getFullYear()} iEye · BytesBrains.
             </p>
           </div>
         </div>

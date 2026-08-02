@@ -29,7 +29,7 @@ export function HowItWorks() {
       <div className="container-wide">
         <div className="container-prose px-0">
           <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-teal-deep">
-            How it works — two speeds
+            iEye Watch — the reason we exist
           </p>
           <h2 id="how-heading" className="text-3xl font-semibold sm:text-4xl">
             You don&rsquo;t have to do anything. You just live.

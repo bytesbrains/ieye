@@ -7,11 +7,12 @@ import { completeEmulatorGoogleSignIn, uniqueUser } from "./helpers";
 // stays as ordinary belt-and-suspenders for a redirect round-trip e2e.
 test.describe.configure({ retries: 1 });
 
-// The public "Continue with Google" waitlist flow: sign in via the Auth emulator
-// and land on the confirmation. Exercises signInWithRedirect end-to-end.
+// The "Continue with Google" early-access waitlist flow now lives on the /app
+// hub: sign in via the Auth emulator and land on the confirmation. Exercises
+// signInWithRedirect end-to-end.
 test("waitlist sign-in confirms 'you're on the list'", async ({ page }) => {
   const user = uniqueUser("waitlist");
-  await page.goto("/");
+  await page.goto("/app");
 
   const card = page.locator("#waitlist");
   await card.getByRole("button", { name: /continue with google/i }).click();

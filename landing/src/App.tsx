@@ -1,11 +1,12 @@
 import { Header } from "./components/Header";
 import { Hero } from "./components/Hero";
+import { Secure } from "./components/Secure";
 import { Gap } from "./components/Gap";
 import { HowItWorks } from "./components/HowItWorks";
 import { Trust } from "./components/Trust";
+import { BytesBrains } from "./components/BytesBrains";
 import { Roadmap } from "./components/Roadmap";
-import { Contribute } from "./components/Contribute";
-import { SupporterWall } from "./components/SupporterWall";
+import { OpenSource } from "./components/OpenSource";
 import { Footer } from "./components/Footer";
 
 export default function App() {
@@ -22,13 +23,17 @@ export default function App() {
       <Header />
 
       <main id="main">
+        {/* Front foot: iEye Secure (home security — value today, the funnel). */}
         <Hero />
+        <Secure />
+        {/* The deeper why: iEye Watch (welfare) — sequenced, never dropped. */}
         <Gap />
         <HowItWorks />
         <Trust />
+        {/* The commercial layer that funds the mission. */}
+        <BytesBrains />
         <Roadmap />
-        <Contribute />
-        <SupporterWall />
+        <OpenSource />
       </main>
 
       <Footer />

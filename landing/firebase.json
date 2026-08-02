@@ -5,6 +5,11 @@
     "ignore": ["firebase.json", "**/node_modules/**"],
     "rewrites": [
       {
+        "//": "Outside-in exposure teaser — same-origin so the function sees the real visitor IP and the browser never talks to Shodan directly. Must precede the SPA catch-all.",
+        "source": "/api/exposure",
+        "function": { "functionId": "exposureCheck", "region": "asia-south1" }
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

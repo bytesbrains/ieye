@@ -212,34 +212,11 @@ export function Roadmap() {
           </div>
         </div>
 
-        {/* Why it costs money — the load-bearing link between the roadmap and the
-            ask. A quiet three-part band, never a fundraising thermometer. */}
+        {/* The honest capability claim — mechanism, never guarantee. (The old
+            "why it costs money" fundraising band was retired with the donation
+            model; the roadmap is now funded by BytesBrains services.) */}
         <div className="container-prose mt-10 px-0">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-charcoal-muted">
-            Why it costs money
-          </p>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border-2 border-charcoal/10 bg-paper p-5">
-              <p className="text-base font-semibold text-charcoal">Hardware buys signal</p>
-              <p className="mt-2 text-sm leading-relaxed text-charcoal-soft">
-                More independent senses, so a dead phone doesn&rsquo;t blind us.
-              </p>
-            </div>
-            <div className="rounded-2xl border-2 border-charcoal/10 bg-paper p-5">
-              <p className="text-base font-semibold text-charcoal">The model buys precision</p>
-              <p className="mt-2 text-sm leading-relaxed text-charcoal-soft">
-                Learning <em>your</em> rhythm is the biggest lever on false alarms.
-              </p>
-            </div>
-            <div className="rounded-2xl border-2 border-charcoal/10 bg-paper p-5">
-              <p className="text-base font-semibold text-charcoal">Simulation buys safe iteration</p>
-              <p className="mt-2 text-sm leading-relaxed text-charcoal-soft">
-                We can&rsquo;t ethically wait for someone to fall to test fall detection — so we
-                rehearse it instead.
-              </p>
-            </div>
-          </div>
-          <HonestyLine className="mt-6" />
+          <HonestyLine />
         </div>
       </div>
     </Section>
