@@ -142,6 +142,93 @@ void main() {
     });
   });
 
+  group('Smart-home device classes (NAS, printer, TV, hub)', () {
+    ({DeviceClass cls, FindingKind kind}) assessOne(DeviceObservation o) {
+      final r = engine.assess(o);
+      return (cls: r.deviceClass, kind: r.findings.first.kind);
+    }
+
+    test('a Synology NAS is classed as storage with hardening guidance', () {
+      final r = engine.assess(const DeviceObservation(
+        ip: '192.168.0.20',
+        openPorts: {80, 443, 445, 5000, 5001},
+        httpServerBanner: 'Synology DiskStation',
+      ));
+      expect(r.deviceClass, DeviceClass.nas);
+      expect(r.vendorFamily, 'Synology');
+      expect(r.findings.map((f) => f.kind),
+          contains(FindingKind.storageDeviceFound));
+    });
+
+    test('a JetDirect printer is classed as a printer', () {
+      final r = assessOne(const DeviceObservation(
+        ip: '192.168.0.30',
+        openPorts: {80, 161, 9100},
+        httpServerBanner: 'HP JetDirect',
+      ));
+      expect(r.cls, DeviceClass.printer);
+      expect(r.kind, FindingKind.printerFound);
+    });
+
+    test('a Chromecast/Android TV is classed as a media device', () {
+      final r = engine.assess(
+        const DeviceObservation(ip: '192.168.0.41', openPorts: {8008, 8009}),
+      );
+      expect(r.deviceClass, DeviceClass.mediaDevice);
+    });
+
+    test('Home Assistant (8123) is classed as a smart hub', () {
+      final r = assessOne(const DeviceObservation(
+        ip: '192.168.0.50',
+        openPorts: {8123},
+        httpServerBanner: 'Home Assistant',
+      ));
+      expect(r.cls, DeviceClass.smartHub);
+      expect(r.kind, FindingKind.smartHubFound);
+    });
+  });
+
+  group('Cross-cutting exposures (any host, Mirai-class killers)', () {
+    test('open Telnet (23) is HIGH — the botnet pattern — on any host', () {
+      final r = engine.assess(
+        const DeviceObservation(ip: '192.168.0.70', openPorts: {23}),
+      );
+      // Even an unclassified host must surface it.
+      expect(r.deviceClass, DeviceClass.unknown);
+      final t =
+          r.findings.firstWhere((f) => f.kind == FindingKind.insecureTelnet);
+      expect(t.severity, Severity.high);
+      expect(t.verified, isFalse);
+    });
+
+    test('open ADB (5555) is HIGH — password-less remote code execution', () {
+      final kinds = engine
+          .assess(const DeviceObservation(ip: '192.168.0.40', openPorts: {8009, 5555}))
+          .findings
+          .map((f) => f.kind);
+      // The TV class is found AND the open debug bridge is flagged.
+      expect(kinds, contains(FindingKind.mediaDeviceFound));
+      expect(kinds, contains(FindingKind.openAdb));
+    });
+
+    test('a reachable database (Redis 6379) is HIGH and names the engine', () {
+      final r = engine.assess(
+        const DeviceObservation(ip: '192.168.0.71', openPorts: {6379}),
+      );
+      final db =
+          r.findings.firstWhere((f) => f.kind == FindingKind.exposedDatabase);
+      expect(db.severity, Severity.high);
+      expect(db.title, contains('Redis'));
+    });
+
+    test('a plain host with no risky ports still invents nothing', () {
+      final r = engine.assess(
+        const DeviceObservation(ip: '192.168.0.139', openPorts: {}),
+      );
+      expect(r.findings, isEmpty);
+    });
+  });
+
   group('Wi-Fi encryption rules', () {
     Finding? only(WifiSecurity s) {
       final f = engine.assessWifi(WifiObservation(security: s));

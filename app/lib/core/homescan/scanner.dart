@@ -145,6 +145,28 @@ class StubScanner implements NetworkScanner {
       openPorts: {80, 554, 37777},
       httpServerBanner: 'DVR-Webs',
     ),
+    // A NAS holding the household's files — Synology DSM (5000/5001) + SMB.
+    DeviceObservation(
+      ip: '192.168.0.20',
+      openPorts: {80, 443, 445, 5000, 5001},
+      httpServerBanner: 'Synology DiskStation',
+    ),
+    // A network printer — raw print (9100) + JetDirect web UI.
+    DeviceObservation(
+      ip: '192.168.0.30',
+      openPorts: {80, 161, 9100},
+      httpServerBanner: 'HP JetDirect',
+    ),
+    // A cheap Android TV box with the ADB debug bridge (5555) left wide open.
+    DeviceObservation(ip: '192.168.0.40', openPorts: {8009, 5555}),
+    // A smart-home hub (Home Assistant) that controls the house.
+    DeviceObservation(
+      ip: '192.168.0.50',
+      openPorts: {8123},
+      httpServerBanner: 'Home Assistant',
+    ),
+    // A little home server left wide open — plaintext Telnet + a no-auth database.
+    DeviceObservation(ip: '192.168.0.70', openPorts: {23, 6379}),
     DeviceObservation(
       ip: '192.168.0.1',
       openPorts: {80},

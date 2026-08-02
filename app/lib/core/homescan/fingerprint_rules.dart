@@ -32,11 +32,24 @@ class FingerprintEngine {
         findings.addAll(_routerFindings(obs));
       case DeviceClass.nvr:
         findings.addAll(_recorderFindings(obs));
+      case DeviceClass.nas:
+        findings.addAll(_nasFindings(obs));
+      case DeviceClass.printer:
+        findings.addAll(_printerFindings(obs));
+      case DeviceClass.mediaDevice:
+        findings.addAll(_mediaFindings(obs));
+      case DeviceClass.smartHub:
+        findings.addAll(_hubFindings(obs));
       case DeviceClass.iot:
       case DeviceClass.computer:
       case DeviceClass.unknown:
         break;
     }
+
+    // Cross-cutting exposures — independent of what the device *is*. An open
+    // Telnet, an open ADB bridge, or a reachable database is a problem on any
+    // host, so these run for every device (even ones we couldn't classify).
+    findings.addAll(_crossCuttingFindings(obs));
 
     return DeviceReport(
       observation: obs,
@@ -69,6 +82,44 @@ class FingerprintEngine {
         obs.hasPort(37777) || banner.contains('dvr') || banner.contains('nvr');
     if (isRecorder) {
       return (DeviceClass.nvr, null, _grepModel(obs.httpServerBanner));
+    }
+
+    // Storage (NAS) — the box holding the household's files. Synology DSM
+    // (5000/5001) or a vendor banner is the tell; SMB (445) corroborates.
+    final isNas = banner.contains('synology') ||
+        banner.contains('qnap') ||
+        banner.contains('diskstation') ||
+        (obs.hasPort(445) && (obs.hasPort(5000) || obs.hasPort(5001)));
+    if (isNas) {
+      return (DeviceClass.nas, _nasVendor(banner), null);
+    }
+
+    // Printer / MFP — raw print (9100), IPP (631), or a printer banner.
+    final isPrinter = obs.hasPort(9100) ||
+        obs.hasPort(631) ||
+        banner.contains('jetdirect') ||
+        banner.contains('printer');
+    if (isPrinter) {
+      return (DeviceClass.printer, null, null);
+    }
+
+    // TV / streaming — Chromecast (8008/8009), Roku (8060), or a media banner.
+    final isMedia = obs.hasPort(8008) ||
+        obs.hasPort(8009) ||
+        obs.hasPort(8060) ||
+        banner.contains('roku') ||
+        banner.contains('chromecast');
+    if (isMedia) {
+      return (DeviceClass.mediaDevice, null, null);
+    }
+
+    // Smart-home hub — Home Assistant (8123) or a Philips Hue bridge.
+    final isHub = obs.hasPort(8123) ||
+        banner.contains('home assistant') ||
+        banner.contains('ipbridge') || // Hue bridge's server string
+        banner.contains('hue');
+    if (isHub) {
+      return (DeviceClass.smartHub, null, null);
     }
 
     // A device serving RTSP (554) alongside a web UI, without the XM pair, is
@@ -229,6 +280,176 @@ class FingerprintEngine {
     ];
     // A recorder usually restreams its cameras' live video too (RTSP).
     if (obs.hasPort(554)) out.add(_streamExposure(obs.ip));
+    return out;
+  }
+
+  String? _nasVendor(String banner) {
+    if (banner.contains('synology') || banner.contains('diskstation')) {
+      return 'Synology';
+    }
+    if (banner.contains('qnap')) return 'QNAP';
+    return null;
+  }
+
+  /// NAS / storage — it holds the household's files and is a top ransomware
+  /// target. Detected here; whether it's already locked down we can't see, so this
+  /// is honest hardening guidance, not an assertion of exposure.
+  List<Finding> _nasFindings(DeviceObservation obs) => [
+    Finding(
+      kind: FindingKind.storageDeviceFound,
+      severity: Severity.medium,
+      deviceIp: obs.ip,
+      title: 'A storage box holding your files is on the network',
+      whatItMeans:
+          'This looks like a NAS — the drive that keeps your photos, documents '
+          'and backups. These are a favourite target for ransomware, and many '
+          'are left reachable from the internet through the maker’s remote-access '
+          'feature. iEye can see it’s here; it can’t see whether it’s locked down.',
+      remediation: const [
+        'Give it a strong admin password and switch off the default admin account.',
+        'Turn off internet/remote access (QuickConnect, myQNAPcloud) unless you '
+            'truly need it.',
+        'Keep one offline backup — the copy ransomware can’t reach.',
+      ],
+      fixOwner: FixOwner.user,
+    ),
+  ];
+
+  /// Printer / MFP — commonly an open web page with no password, and it keeps
+  /// copies of what it scans. Not an emergency on its own; worth closing.
+  List<Finding> _printerFindings(DeviceObservation obs) => [
+    Finding(
+      kind: FindingKind.printerFound,
+      severity: Severity.medium,
+      deviceIp: obs.ip,
+      title: 'A printer is open on the network',
+      whatItMeans:
+          'Network printers often have an open settings page with no password, '
+          'keep copies of what they scan, and are frequently left reachable from '
+          'the internet. On its own that’s low-risk, but it’s worth closing.',
+      remediation: const [
+        'Set an admin password on the printer’s settings page.',
+        'Turn off protocols you don’t use (FTP, Telnet, printing from outside).',
+      ],
+      fixOwner: FixOwner.user,
+    ),
+  ];
+
+  /// TV / streaming device — usually low-risk, but it can be told what to play by
+  /// anything on the Wi-Fi and often tracks viewing. The real teeth (an open ADB
+  /// debug port on cheap Android boxes) are added by the cross-cutting pass.
+  List<Finding> _mediaFindings(DeviceObservation obs) => [
+    Finding(
+      kind: FindingKind.mediaDeviceFound,
+      severity: Severity.low,
+      deviceIp: obs.ip,
+      title: 'A TV or streaming device is on the network',
+      whatItMeans:
+          'Smart TVs and streaming boxes can be told what to play by anything on '
+          'your Wi-Fi, and many track what you watch. Usually low-risk on its own.',
+      remediation: const [
+        'Keep it updated, and turn off “viewing data” / ACR in its privacy settings.',
+      ],
+      fixOwner: FixOwner.user,
+    ),
+  ];
+
+  /// Smart-home hub — it controls other devices (possibly lights, locks, cameras).
+  /// Being on your own network is normal; being weakly protected is the risk.
+  List<Finding> _hubFindings(DeviceObservation obs) => [
+    Finding(
+      kind: FindingKind.smartHubFound,
+      severity: Severity.medium,
+      deviceIp: obs.ip,
+      title: 'A smart-home hub is on the network',
+      whatItMeans:
+          'This controls your smart devices — which may include lights, locks and '
+          'cameras. If it has a weak password or is reachable from the internet, '
+          'someone could control your home. Being on your own network is normal; '
+          'being weakly secured is the risk.',
+      remediation: const [
+        'Give it a strong, unique password and turn on two-factor if it offers it.',
+        'Don’t expose it directly to the internet — reach it through the maker’s '
+            'app or a VPN.',
+      ],
+      fixOwner: FixOwner.user,
+    ),
+  ];
+
+  /// Exposures that don't depend on what the device is — run for every host.
+  List<Finding> _crossCuttingFindings(DeviceObservation obs) {
+    final out = <Finding>[];
+
+    // Open Telnet (23) — the Mirai pattern: unencrypted remote login, almost
+    // always with a factory password on IoT gear. Should never be open.
+    if (obs.hasPort(23)) {
+      out.add(Finding(
+        kind: FindingKind.insecureTelnet,
+        severity: Severity.high,
+        deviceIp: obs.ip,
+        title: 'This device allows old, insecure remote login (Telnet)',
+        whatItMeans:
+            'Telnet is an old remote-control service with no encryption, and the '
+            'devices that still run it usually ship with a default password. This '
+            'is exactly how large IoT botnets are built. It should be turned off.',
+        remediation: const [
+          'Turn off Telnet in the device’s settings, or update its firmware.',
+          'If you can’t, a specialist can block it and stop the device phoning out.',
+        ],
+        fixOwner: FixOwner.specialist,
+      ));
+    }
+
+    // Open Android Debug Bridge (5555) — password-less remote code execution,
+    // common on cheap Android TV boxes; there are worms that scan for it.
+    if (obs.hasPort(5555)) {
+      out.add(Finding(
+        kind: FindingKind.openAdb,
+        severity: Severity.high,
+        deviceIp: obs.ip,
+        title: 'A device is wide open to remote control (ADB debug port)',
+        whatItMeans:
+            'An Android debug port is open. Anyone on the network — and worms '
+            'that hunt for it — can install and run software on this device with '
+            'no password. It’s common on cheap Android TV boxes.',
+        remediation: const [
+          'Turn off “USB debugging” / “ADB over network” in developer settings.',
+          'Consider replacing cheap boxes that ship with this switched on.',
+        ],
+        fixOwner: FixOwner.user,
+      ));
+    }
+
+    // A database reachable on the network. If it has no password (a common
+    // home-server default) it's a full read/wipe of everything in it.
+    const dbPorts = {
+      6379: 'Redis',
+      27017: 'MongoDB',
+      3306: 'MySQL',
+      5432: 'PostgreSQL',
+      9200: 'Elasticsearch',
+    };
+    for (final e in dbPorts.entries) {
+      if (obs.hasPort(e.key)) {
+        out.add(Finding(
+          kind: FindingKind.exposedDatabase,
+          severity: Severity.high,
+          deviceIp: obs.ip,
+          title: 'A database (${e.value}) is reachable on your network',
+          whatItMeans:
+              'A ${e.value} database is answering on your network. On home '
+              'servers these are often set up with no password — if so, anyone '
+              'who reaches it can read or wipe everything in it.',
+          remediation: const [
+            'Require a password and bind the database to localhost only.',
+            'Never forward its port to the internet.',
+          ],
+          fixOwner: FixOwner.specialist,
+        ));
+        break; // one is enough to make the point
+      }
+    }
+
     return out;
   }
 

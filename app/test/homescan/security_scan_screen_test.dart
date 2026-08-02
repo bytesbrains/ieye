@@ -46,7 +46,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
 
     // Report state: the CRITICAL finding surfaces, badged by WORD (not colour).
-    expect(find.textContaining('reachable from the internet'), findsOneWidget);
+    // (Match the headline's exact phrasing — several findings also mention being
+    // "reachable from the internet".)
+    expect(
+      find.textContaining('may be reachable from the internet'),
+      findsOneWidget,
+    );
     expect(find.text('CRITICAL'), findsWidgets);
 
     // The pulsing critical alert draws the eye to internet-reachable exposure.

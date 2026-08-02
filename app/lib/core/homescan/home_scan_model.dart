@@ -75,6 +75,30 @@ enum FindingKind {
   /// The device auto-opens a hole in the router (UPnP) — checked at the router.
   upnpExposure,
 
+  /// A NAS / storage box holding the household's files — ransomware target and
+  /// often reachable from the internet via the maker's remote-access feature.
+  storageDeviceFound,
+
+  /// A network printer/MFP — commonly an open web UI, keeps scanned copies.
+  printerFound,
+
+  /// A smart-home hub/bridge that controls other devices — weak auth or internet
+  /// exposure would hand over control of the home.
+  smartHubFound,
+
+  /// A TV / streaming device — controllable from the LAN, often tracks viewing.
+  mediaDeviceFound,
+
+  /// Plaintext remote login (Telnet, port 23) is open — the Mirai-botnet pattern.
+  insecureTelnet,
+
+  /// An open Android Debug Bridge (port 5555) — password-less remote code exec.
+  openAdb,
+
+  /// A database service (Redis/MongoDB/MySQL/…) reachable on the network — a full
+  /// data leak if it has no password, which is a common home-server default.
+  exposedDatabase,
+
   /// Wi-Fi is open/unencrypted, or on a weak cipher.
   weakWifi,
 
@@ -95,7 +119,28 @@ enum FixOwner {
 }
 
 /// What kind of thing a device is, as far as we can tell passively.
-enum DeviceClass { ipCamera, router, accessPoint, nvr, computer, iot, unknown }
+enum DeviceClass {
+  ipCamera,
+  router,
+  accessPoint,
+  nvr,
+
+  /// Network storage (NAS) — the box that holds photos, documents, backups.
+  nas,
+
+  /// A network printer / multifunction device.
+  printer,
+
+  /// A TV or streaming box (Chromecast, Roku, Android TV, …).
+  mediaDevice,
+
+  /// A smart-home hub/bridge that controls other devices (Home Assistant, Hue, …).
+  smartHub,
+
+  computer,
+  iot,
+  unknown,
+}
 
 /// The passive, on-device observation of one host. This is ALL the mass tier is
 /// allowed to gather: open ports and the banners a service volunteers. No login,
