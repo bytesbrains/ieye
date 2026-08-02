@@ -15,10 +15,12 @@ import 'features/circle/circle_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/homescan/security_scan_screen.dart';
 import 'features/onboarding/onboarding_entry_screen.dart';
+import 'core/platform_support.dart';
 import 'features/support/auth_service.dart';
 import 'features/support/speech_input.dart';
 import 'features/support/support_repository.dart';
 import 'features/support/support_request_screen.dart';
+import 'features/support/support_unavailable_screen.dart';
 import 'theme/ieye_theme.dart';
 
 /// iEye app shell. Wires the shared detection brain (Tier-0 stub for now) and the
@@ -113,13 +115,23 @@ class _IEyeAppState extends State<IEyeApp> {
         // Raise a request for professional help (iEye Secure → a BytesBrains
         // specialist). The scan to attach rides in as a route argument. Real
         // Firebase/auth/speech in production; tests inject fakes.
-        '/support-request': (context) => SupportRequestScreen(
-              report: ModalRoute.of(context)?.settings.arguments as ScanReport?,
-              auth: widget.authService ?? FirebaseAuthService(),
-              repository:
-                  widget.supportRepository ?? FirestoreSupportRepository(),
-              speech: widget.speechInput ?? DeviceSpeechInput(),
-            ),
+        '/support-request': (context) {
+          final report =
+              ModalRoute.of(context)?.settings.arguments as ScanReport?;
+          // Desktop (Linux/Windows) has no Firebase — hand off to the phone/Mac
+          // app instead of constructing FirebaseAuthService and crashing. Tests
+          // inject a fake auth, so they always get the real screen.
+          if (widget.authService == null && !firebaseConfigured) {
+            return SupportUnavailableScreen(report: report);
+          }
+          return SupportRequestScreen(
+            report: report,
+            auth: widget.authService ?? FirebaseAuthService(),
+            repository:
+                widget.supportRepository ?? FirestoreSupportRepository(),
+            speech: widget.speechInput ?? DeviceSpeechInput(),
+          );
+        },
         // Checkers arrive here from an invite link (#17). Demo invite until real
         // invites are wired; the handshake itself is fully functional.
         '/checker-invite':
