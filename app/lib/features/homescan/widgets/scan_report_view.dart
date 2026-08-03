@@ -555,9 +555,6 @@ class _DeviceCard extends StatelessWidget {
   }
 }
 
-/// The Wi-Fi & router network stats: name, encryption, band — plus any Wi-Fi
-/// finding. When the platform can't read security (iOS), it says so honestly and
-/// points up the tier ladder, instead of showing a misleading "OK".
 /// Network-level findings (segmentation) — about how the network is *arranged*,
 /// not one device. Styled like the Wi-Fi section; reuses the finding block.
 class _NetworkSection extends StatelessWidget {
@@ -600,6 +597,9 @@ class _NetworkSection extends StatelessWidget {
   }
 }
 
+/// The Wi-Fi & router network stats: name, encryption, band — plus any Wi-Fi
+/// finding. When the platform can't read security (iOS), it says so honestly and
+/// points up the tier ladder, instead of showing a misleading "OK".
 class _WifiSection extends StatelessWidget {
   const _WifiSection(this.wifi);
   final WifiReport wifi;
