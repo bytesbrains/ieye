@@ -102,6 +102,12 @@ enum FindingKind {
   /// Wi-Fi is open/unencrypted, or on a weak cipher.
   weakWifi,
 
+  /// A flat network: several sensitive devices (cameras, recorders, storage,
+  /// hubs) are reachable from the vantage the scan ran on, so they aren't walled
+  /// off from the other devices — and people — on that Wi-Fi. The premises
+  /// failure mode (guest Wi-Fi reaching cameras/POS), and a home one too.
+  flatNetwork,
+
   /// Something identified for context; no weakness asserted.
   informational,
 }

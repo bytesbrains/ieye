@@ -5,7 +5,12 @@ import 'home_scan_model.dart';
 /// [FingerprintEngine]. Pure data — it holds no transport and is never synced
 /// (the inventory is a map of someone's home; it stays on the phone).
 class ScanReport {
-  ScanReport({required this.startedAt, required this.devices, this.wifi});
+  ScanReport({
+    required this.startedAt,
+    required this.devices,
+    this.wifi,
+    this.networkFindings = const [],
+  });
 
   final DateTime startedAt;
   final List<DeviceReport> devices;
@@ -13,9 +18,15 @@ class ScanReport {
   /// Network-level Wi-Fi findings (open/weak encryption), null if not gathered.
   final WifiReport? wifi;
 
+  /// Network-level findings that aren't about one device but about how the
+  /// network is *arranged* — chiefly segmentation (sensitive devices reachable
+  /// from the vantage the scan ran on). Empty when nothing network-level applies.
+  final List<Finding> networkFindings;
+
   Iterable<Finding> get _allFindings => [
     ...devices.expand((d) => d.findings),
     ...?wifi?.findings,
+    ...networkFindings,
   ];
 
   int get deviceCount => devices.length;
@@ -121,6 +132,7 @@ class StubScanner implements NetworkScanner {
         observation: wifiObs,
         findings: engine.assessWifi(wifiObs),
       ),
+      networkFindings: engine.assessNetwork(devices),
     );
   }
 

@@ -70,6 +70,14 @@ void main() {
     // mDNS gives devices their real names — a friendly title beats a generic one.
     expect(find.text('Living Room TV'), findsOneWidget);
 
+    // The network-level segmentation finding (#14 flat-network risk) surfaces as
+    // its own card — several sensitive devices reachable from one Wi-Fi.
+    expect(find.text('How your network is arranged'), findsOneWidget);
+    expect(
+      find.textContaining('sensitive devices share this network'),
+      findsOneWidget,
+    );
+
     // Honesty: passive findings are tagged "not confirmed", never claimed proven.
     expect(find.textContaining('not confirmed'), findsWidgets);
 

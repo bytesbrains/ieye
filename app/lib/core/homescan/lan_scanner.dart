@@ -120,7 +120,12 @@ class LanScanner implements NetworkScanner {
       findings: engine.assessWifi(wifiObs),
     );
 
-    return ScanReport(startedAt: _now(), devices: reports, wifi: wifi);
+    return ScanReport(
+      startedAt: _now(),
+      devices: reports,
+      wifi: wifi,
+      networkFindings: engine.assessNetwork(reports),
+    );
   }
 
   static int _octet(String ip) => int.tryParse(ip.split('.').last) ?? 0;

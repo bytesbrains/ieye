@@ -386,6 +386,62 @@ void main() {
     });
   });
 
+  group('Network segmentation — the flat-network finding', () {
+    // Sensitive families the check looks for: camera / recorder / storage / hub.
+    final camera = const DeviceObservation(
+      ip: '192.168.0.10',
+      openPorts: {80, 554, 8899, 34567},
+      httpServerBanner: 'IPC_GK7205V200_G4F_S38',
+    );
+    final camera2 = const DeviceObservation(
+      ip: '192.168.0.13',
+      openPorts: {80, 554, 8899, 34567},
+      httpServerBanner: 'IPC_GK7205V200_G4H_S38',
+    );
+    final recorder = const DeviceObservation(
+      ip: '192.168.0.11',
+      openPorts: {80, 554, 37777},
+      httpServerBanner: 'DVR-Webs',
+    );
+    final nas = const DeviceObservation(
+      ip: '192.168.0.12',
+      mdnsServices: {'_smb._tcp'},
+    );
+    final router = const DeviceObservation(
+      ip: '192.168.0.1',
+      openPorts: {80},
+      httpServerBanner: 'TP-LINK HTTPD/1.0',
+    );
+
+    List<DeviceReport> reports(List<DeviceObservation> obs) =>
+        [for (final o in obs) engine.assess(o)];
+
+    test('≥2 sensitive devices reachable → one MEDIUM, inferred finding', () {
+      final net = engine.assessNetwork(reports([camera, recorder, nas]));
+      expect(net, hasLength(1));
+      final f = net.single;
+      expect(f.kind, FindingKind.flatNetwork);
+      expect(f.severity, Severity.medium);
+      expect(f.verified, isFalse);
+      expect(f.fixOwner, FixOwner.specialist);
+      // Names what's reachable, and speaks to the premises case.
+      expect(f.whatItMeans, contains('camera'));
+      expect(f.whatItMeans, contains('video recorder'));
+      expect(f.whatItMeans, contains('guest'));
+    });
+
+    test('one sensitive device does NOT trigger it (per-device covers that)', () {
+      // A lone camera + a router (not sensitive) — no flat-network finding.
+      expect(engine.assessNetwork(reports([camera, router])), isEmpty);
+    });
+
+    test('summary pluralises and lists worst-first', () {
+      final f =
+          engine.assessNetwork(reports([camera, camera2, recorder])).single;
+      expect(f.whatItMeans, contains('2 cameras and a video recorder'));
+    });
+  });
+
   group('Wi-Fi encryption rules', () {
     Finding? only(WifiSecurity s) {
       final f = engine.assessWifi(WifiObservation(security: s));
