@@ -30,6 +30,10 @@ class ScanReportView extends StatelessWidget {
             _WifiSection(report.wifi!),
             const SizedBox(height: 16),
           ],
+          if (report.networkFindings.isNotEmpty) ...[
+            _NetworkSection(report.networkFindings),
+            const SizedBox(height: 16),
+          ],
           for (final device in report.flagged) ...[
             _DeviceCard(device),
             const SizedBox(height: 16),
@@ -554,6 +558,48 @@ class _DeviceCard extends StatelessWidget {
 /// The Wi-Fi & router network stats: name, encryption, band — plus any Wi-Fi
 /// finding. When the platform can't read security (iOS), it says so honestly and
 /// points up the tier ladder, instead of showing a misleading "OK".
+/// Network-level findings (segmentation) — about how the network is *arranged*,
+/// not one device. Styled like the Wi-Fi section; reuses the finding block.
+class _NetworkSection extends StatelessWidget {
+  const _NetworkSection(this.findings);
+  final List<Finding> findings;
+
+  @override
+  Widget build(BuildContext context) {
+    final text = Theme.of(context).textTheme;
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: IEyeColors.paperDim,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.hub_outlined,
+                  color: IEyeColors.charcoal, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'How your network is arranged',
+                  style: text.titleLarge?.copyWith(fontSize: 18),
+                ),
+              ),
+            ],
+          ),
+          for (final f in findings) ...[
+            const Divider(height: 24, color: Color(0x22000000)),
+            _FindingBlock(f),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _WifiSection extends StatelessWidget {
   const _WifiSection(this.wifi);
   final WifiReport wifi;

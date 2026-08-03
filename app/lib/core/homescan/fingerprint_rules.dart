@@ -623,6 +623,80 @@ class FingerprintEngine {
     }
   }
 
+  /// Network-LEVEL findings: not about one device, but how the network is
+  /// *arranged*. The segmentation check — when several sensitive devices
+  /// (cameras, recorders, storage, hubs) are reachable from the vantage the scan
+  /// ran on, they share a flat network, so anything else on that Wi-Fi (a guest's
+  /// phone, a visitor's laptop, a compromised gadget) can reach them too. This is
+  /// the premises failure mode (guest Wi-Fi reaching cameras/POS) and a home one.
+  /// Inference only ([Finding.verified] == false), like every mass-tier finding.
+  List<Finding> assessNetwork(Iterable<DeviceReport> devices) {
+    const sensitive = {
+      DeviceClass.ipCamera,
+      DeviceClass.nvr,
+      DeviceClass.nas,
+      DeviceClass.smartHub,
+    };
+    final reachable = [
+      for (final d in devices)
+        if (sensitive.contains(d.deviceClass)) d.deviceClass,
+    ];
+    // One sensitive device on your own LAN is normal-ish and already covered by
+    // its per-device findings. The segmentation risk is the *cluster*: several
+    // reachable from a single vantage means a flat, unsegmented network.
+    if (reachable.length < 2) return const [];
+
+    final summary = _summariseClasses(reachable);
+    return [
+      Finding(
+        kind: FindingKind.flatNetwork,
+        severity: Severity.medium,
+        title: 'Cameras and other sensitive devices share this network',
+        whatItMeans:
+            'From the Wi-Fi this scan ran on, it could reach $summary. They sit '
+            'on one flat network, so anything else on this Wi-Fi — a guest’s '
+            'phone, a visitor’s laptop, a compromised gadget — can reach them '
+            'too. Ideally they’re walled off (segmented) from the devices and '
+            'people that don’t need them. If others ever join this Wi-Fi — a '
+            'rental, a café, an office — guests should never reach these at all.',
+        remediation: const [
+          'Put cameras, recorders and storage on their own network, separate '
+              'from phones, laptops and guests (a specialist can set this up).',
+          'If people join your Wi-Fi as guests, give them a fully isolated guest '
+              'network that can’t see anything else.',
+        ],
+        fixOwner: FixOwner.specialist,
+      ),
+    ];
+  }
+
+  /// "2 cameras, a video recorder and storage" from a bag of device classes.
+  String _summariseClasses(List<DeviceClass> classes) {
+    const label = {
+      DeviceClass.ipCamera: 'camera',
+      DeviceClass.nvr: 'video recorder',
+      DeviceClass.nas: 'storage drive',
+      DeviceClass.smartHub: 'smart-home hub',
+    };
+    final counts = <DeviceClass, int>{};
+    for (final c in classes) {
+      counts[c] = (counts[c] ?? 0) + 1;
+    }
+    final parts = <String>[
+      // Stable order: cameras, recorders, storage, hubs.
+      for (final c in const [
+        DeviceClass.ipCamera,
+        DeviceClass.nvr,
+        DeviceClass.nas,
+        DeviceClass.smartHub,
+      ])
+        if ((counts[c] ?? 0) > 0)
+          counts[c] == 1 ? 'a ${label[c]}' : '${counts[c]} ${label[c]}s',
+    ];
+    if (parts.length == 1) return parts.first;
+    return '${parts.sublist(0, parts.length - 1).join(', ')} and ${parts.last}';
+  }
+
   /// Pull a model string like "IPC_GK7205V200" out of a banner if present.
   String? _grepModel(String? banner) {
     if (banner == null) return null;
